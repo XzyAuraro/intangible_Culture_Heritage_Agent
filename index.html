@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>宋代园林导览Demo (高保真纯净男声版)</title>
+    <style>
+        body { font-family: sans-serif; background: #f4f1ea; padding: 40px; text-align: center; }
+        .container { max-width: 700px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; border: 1px solid #dcd7ca; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .box { background: #faf8f5; border: 1px solid #e6e2d8; padding: 20px; border-radius: 4px; margin-top: 20px; text-align: left; }
+        button { font-size: 15px; padding: 10px 18px; margin: 8px; cursor: pointer; background: #8c765c; color: white; border: none; border-radius: 4px; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        .control-panel { background: #f9f9f9; padding: 15px; border-radius: 6px; margin: 20px 0; border: 1px dashed #ccc; }
+        .slider-container { margin: 15px 0; font-size: 15px; color: #5c4b37; }
+        audio { width: 100%; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>宋代文人园林讲解系统</h1>
+    
+    <div style="margin-bottom: 20px;">
+        <input type="text" id="textInput" value="为什么沧浪亭里有修竹？" style="font-size: 16px; padding: 10px; width: 60%; border: 1px solid #ccc; border-radius: 4px;">
+        <button id="sendTextBtn">文字提问</button>
+    </div>
+    <div>
+        <button id="startBtn">开始说话</button>
+        <button id="stopBtn" disabled>说完了，发送</button>
+    </div>
+
+    <div id="status" style="color: #666; font-style: italic; margin: 10px;">状态：等待提问</div>
+
+    <div class="control-panel">
+        <div style="font-weight: bold; color: #8c765c; margin-bottom: 10px;">🔊 高保真文人音频控制台</div>
+        
+        <audio id="audioPlayer" controls></audio>
+
+        <div class="slider-container">
+            <label for="rateSlider">调节讲解语速：</label>
+            <input type="range" id="rateSlider" min="0.5" max="2.0" step="0.1" value="0.9">
+            <span id="rateValue">0.9</span> 倍速
+        </div>
+    </div>
+
+    <div class="box">
+        <p><strong>【你问了什么】</strong></p>
+        <div id="userText">-</div>
+        <br>
+        <p><strong>【宋代文人回复】</strong></p>
+        <div id="aiText" style="color: #5c4b37; font-weight: bold; line-height: 1.6;">-</div>
+        <br>
+        <p id="sourceText" style="font-size: 14px; color: #999; text-align: right;">出处：-</p>
+    </div>
+</div>
+
+<script>
+    let recognition;
+    let finalTranscript = "";
+    const audioPlayer = document.getElementById('audioPlayer');
+    const rateSlider = document.getElementById('rateSlider');
+
+    // 强制让可能还在后台死循环的本地女声引擎闭嘴，彻底断根
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+    }
+
+    // 浏览器听写初始化
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+        recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.lang = 'zh-CN';
+        recognition.onresult = (e) => { finalTranscript = e.results[0][0].transcript; };
+        recognition.onend = () => { if (finalTranscript) sendToBackend(finalTranscript); };
+    }
+
+    // 实时改变 MP3 播放器的倍速，极度丝滑
+    rateSlider.oninput = function() {
+        document.getElementById('rateValue').innerText = this.value;
+        audioPlayer.playbackRate = parseFloat(this.value); 
+    };
+
+    async function sendToBackend(text) {
+        document.getElementById('status').innerText = "状态：文人正在思索理据...";
+        audioPlayer.pause();
+        
+        const formData = new FormData();
+        formData.append('file', new Blob([], {type: 'audio/wav'}), 'text_query.wav');
+        
+        try {
+            // 加上时间戳打破缓存机制
+            const res = await fetch('http://127.0.0.1:8000/api/chat?text_fallback=' + encodeURIComponent(text) + '&t=' + Date.now(), { method: 'POST', body: formData });
+            const data = await res.json();
+            
+            document.getElementById('status').innerText = "状态：讲解中。";
+            document.getElementById('userText').innerText = data.user_text;
+            document.getElementById('aiText').innerText = data.speech_text;
+            document.getElementById('sourceText').innerText = "出处：" + data.source;
+            
+            // === 【核心动作：这里只让音频播放器发声，绝无任何女声代码】 ===
+            audioPlayer.src = data.audio_url + '?t=' + Date.now();
+            audioPlayer.load();
+            audioPlayer.playbackRate = parseFloat(rateSlider.value); 
+            
+            // 延迟一点点播放，防止Mac浏览器拦截自动播放权限
+            setTimeout(() => {
+                audioPlayer.play().catch(e => {
+                    document.getElementById('status').innerText = "状态：音频已就绪，请点击下方播放按钮听取讲解。";
+                });
+            }, 100);
+            
+        } catch (err) {
+            document.getElementById('status').innerText = "后端通信失败";
+        }
+    }
+
+    document.getElementById('sendTextBtn').onclick = () => sendToBackend(document.getElementById('textInput').value);
+    document.getElementById('startBtn').onclick = () => {
+        finalTranscript = "";
+        if(recognition) {
+            recognition.start();
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+            document.getElementById('status').innerText = "状态：正在聆听...";
+        }
+    };
+    document.getElementById('stopBtn').onclick = () => {
+        if(recognition) recognition.stop();
+        document.getElementById('startBtn').disabled = false;
+        document.getElementById('stopBtn').disabled = true;
+    };
+</script>
+</body>
+</html>
