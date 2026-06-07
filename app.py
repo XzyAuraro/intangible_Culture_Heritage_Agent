@@ -365,7 +365,7 @@ async def synthesize(text: str) -> str:
     voice = os.getenv("EDGE_TTS_VOICE", "zh-CN-YunxiNeural")
     communicate = edge_tts.Communicate(text, voice)
     await communicate.save(str(audio_path))
-    return f"http://127.0.0.1:8000/static/{audio_name}"
+    return f"/static/{audio_name}"
 
 
 class ChatRequest(BaseModel):
