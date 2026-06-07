@@ -482,8 +482,7 @@ def call_palace_llm(question: str, bundle: dict[str, Any], mode: str) -> str:
     gallery = bundle["gallery"]
     artifact = bundle["artifact"]
     if not API_KEY:
-        evidence = bundle["contexts"][0]["evidence"] if bundle["contexts"] else artifact["description"]
-        return f"诸位请看《{artifact['title']}》。{evidence} 若从{gallery['persona']['name']}的眼中观之，此物不只是陈设，也是{gallery['name']}所要讲述的历史线索。"
+        return build_palace_fallback(bundle)
     completion = client.chat.completions.create(
         model=os.getenv("DASHSCOPE_MODEL", "qwen-plus"),
         messages=build_palace_prompt(question, bundle, mode),
@@ -492,15 +491,38 @@ def call_palace_llm(question: str, bundle: dict[str, Any], mode: str) -> str:
     return completion.choices[0].message.content.strip()
 
 
+def build_palace_fallback(bundle: dict[str, Any]) -> str:
+    gallery = bundle["gallery"]
+    artifact = bundle["artifact"]
+    evidence_items = [item["evidence"] for item in bundle["contexts"][:2]]
+    evidence = " ".join(evidence_items) if evidence_items else artifact["description"]
+    return (
+        f"请看《{artifact['title']}》。{artifact['description']}"
+        f"它所在的{gallery['name']}强调的是：{gallery['summary']}"
+        f"可参考的资料线索包括：{evidence}"
+    )
+
+
 @app.post("/api/palace/chat")
 async def palace_chat(payload: PalaceChatRequest):
     bundle = retrieve_palace(payload.question, payload.gallery_id, payload.artifact_id)
-    speech_text = call_palace_llm(payload.question, bundle, payload.mode)
-    audio_url = await synthesize(speech_text)
     gallery = bundle["gallery"]
     artifact = bundle["artifact"]
+    warnings = []
+    try:
+        speech_text = call_palace_llm(payload.question, bundle, payload.mode)
+    except Exception as exc:
+        speech_text = build_palace_fallback(bundle)
+        warnings.append(f"模型生成暂时不可用，已改用本地 RAG 资料回答：{type(exc).__name__}")
+    try:
+        audio_url = await synthesize(speech_text)
+    except Exception as exc:
+        audio_url = ""
+        warnings.append(f"语音合成暂时不可用：{type(exc).__name__}")
     return {
         "status": "success",
+        "degraded": bool(warnings),
+        "warnings": warnings,
         "user_text": payload.question,
         "gallery_id": gallery["id"],
         "gallery_name": gallery["name"],

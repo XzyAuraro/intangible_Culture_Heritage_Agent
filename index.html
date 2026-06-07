@@ -1084,17 +1084,29 @@
           mode
         })
       });
+      if (!res.ok) {
+        const message = await res.text();
+        throw new Error(message || `请求失败：${res.status}`);
+      }
       const data = await res.json();
       if (data.status !== "success") throw new Error(data.message || "生成失败");
       output.innerText = data.speech_text;
+      if (data.warnings && data.warnings.length) {
+        output.innerText += `\n\n提示：${data.warnings.join("；")}`;
+      }
       renderSources(scope, data.contexts || []);
-      audio.src = data.audio_url + "?t=" + Date.now();
-      audio.load();
-      setTimeout(() => {
-        audio.play().catch(() => {
-          output.innerText = data.speech_text + "\n\n音频已生成，请点击播放器播放。";
-        });
-      }, 100);
+      if (data.audio_url) {
+        audio.src = data.audio_url + "?t=" + Date.now();
+        audio.load();
+        setTimeout(() => {
+          audio.play().catch(() => {
+            output.innerText += "\n\n音频已生成，请点击播放器播放。";
+          });
+        }, 100);
+      } else {
+        audio.removeAttribute("src");
+        audio.load();
+      }
     } catch (err) {
       output.innerText = err.message;
     } finally {
