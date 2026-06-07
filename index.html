@@ -635,6 +635,26 @@
       flex: 0 0 auto;
     }
 
+    .audio-status {
+      display: none;
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: rgba(54, 95, 84, .08);
+      border: 1px solid rgba(54, 95, 84, .16);
+      color: var(--jade);
+      font-size: 12px;
+      line-height: 1.5;
+      flex: 0 0 auto;
+    }
+
+    .audio-status.active {
+      display: block;
+    }
+
+    .audio-status strong {
+      color: var(--red-deep);
+    }
+
     .detail-layout {
       min-height: calc(100vh - 68px);
       display: grid;
@@ -891,6 +911,7 @@
       </div>
       <div class="ai-output" id="galleryAiOutput">可以在展馆内直接提问，例如：这个展馆最值得先看什么？</div>
       <audio id="galleryAudio" controls></audio>
+      <div class="audio-status" id="galleryAudioStatus" aria-live="polite"></div>
       <div class="rag-sources" id="gallerySources"></div>
       <div class="ai-form">
         <input id="galleryQuestion" placeholder="向本馆讲解者提问">
@@ -929,6 +950,7 @@
         <h3 id="detailPersona">向讲解者提问</h3>
         <div class="ai-output" id="detailAiOutput">可以问：这件文物为什么重要？它和当时的宫廷生活有什么关系？</div>
         <audio id="detailAudio" controls></audio>
+        <div class="audio-status" id="detailAudioStatus" aria-live="polite"></div>
         <div class="rag-sources" id="detailSources"></div>
         <div class="ai-form">
           <input id="detailQuestion" placeholder="围绕当前文物提问">
@@ -1006,6 +1028,12 @@
     box.classList.toggle("active", active && Boolean(title));
   }
 
+  function setAudioStatus(scope, title, text = "", active = true) {
+    const box = scope === "detail" ? $("detailAudioStatus") : $("galleryAudioStatus");
+    box.innerHTML = title ? `<strong>${title}</strong>${text ? ` ${text}` : ""}` : "";
+    box.classList.toggle("active", active && Boolean(title));
+  }
+
   async function loadPalace() {
     const res = await fetch(`${API_BASE}/api/palace`);
     palace = await res.json();
@@ -1074,6 +1102,7 @@
     $("galleryAiOutput").innerText = "可以在展馆内直接提问，例如：这个展馆最值得先看什么？";
     clearSources("gallery");
     $("galleryAudio").removeAttribute("src");
+    setAudioStatus("gallery", "", "", false);
     renderArtifacts();
     showScreen("galleryScreen");
   }
@@ -1115,6 +1144,7 @@
     $("detailAiOutput").innerText = "可以问：这件文物为什么重要？它和当时的宫廷生活有什么关系？";
     clearSources("detail");
     $("detailAudio").removeAttribute("src");
+    setAudioStatus("detail", "", "", false);
     showScreen("detailScreen");
   }
 
@@ -1152,16 +1182,30 @@
       }
       renderSources(scope, data.contexts || []);
       if (data.audio_url) {
-        audio.src = data.audio_url + "?t=" + Date.now();
+        setAudioStatus(scope, "正在加载音频", "生成完成，正在准备播放器。");
+        const audioUrl = new URL(data.audio_url, API_BASE).href;
+        audio.onloadedmetadata = () => {
+          setAudioStatus(scope, "音频已就绪", "可以点击播放器播放。");
+        };
+        audio.oncanplay = () => {
+          setAudioStatus(scope, "音频已就绪", "可以点击播放器播放。");
+        };
+        audio.onerror = () => {
+          setAudioStatus(scope, "音频加载失败", "请刷新后重试，或先查看文字讲解。");
+        };
+        audio.src = audioUrl + "?t=" + Date.now();
         audio.load();
         setTimeout(() => {
-          audio.play().catch(() => {
-            output.innerText += "\n\n音频已生成，请点击播放器播放。";
+          audio.play().then(() => {
+            setAudioStatus(scope, "正在播放", "可以用播放器暂停或调整进度。");
+          }).catch(() => {
+            setAudioStatus(scope, "音频已生成", "浏览器拦截自动播放，请点击播放器播放。");
           });
         }, 100);
       } else {
         audio.removeAttribute("src");
         audio.load();
+        setAudioStatus(scope, "语音暂不可用", "可以先查看文字讲解。");
       }
     } catch (err) {
       output.innerText = err.message;
