@@ -1,4 +1,5 @@
 import json
+import math
 import os
 import re
 import uuid
@@ -191,46 +192,136 @@ def find_artifact(gallery: dict[str, Any], artifact_id: str | None) -> dict[str,
 
 def retrieve_palace(question: str, gallery_id: str | None = None, artifact_id: str | None = None) -> dict[str, Any]:
     palace = load_palace()
-    query_tokens = tokenize(question)
-    candidates = []
-    for gallery in palace["galleries"]:
-        gallery_text = " ".join([gallery["name"], gallery["zone"], gallery["summary"], gallery["source"]])
-        gallery_score = len(query_tokens & tokenize(gallery_text))
-        if gallery_id and gallery["id"] == gallery_id:
-            gallery_score += 10
-        for artifact in gallery["artifacts"]:
-            artifact_text = " ".join(
+    gallery = find_gallery(gallery_id)
+    artifact = find_artifact(gallery, artifact_id)
+    contexts = retrieve_palace_contexts(question, gallery, artifact)
+    if not gallery_id and contexts:
+        gallery = find_gallery(contexts[0].get("gallery_id"))
+        artifact = find_artifact(gallery, contexts[0].get("artifact_id"))
+    return {"museum": palace["museum"], "gallery": gallery, "artifact": artifact, "contexts": contexts}
+
+
+def build_palace_documents() -> list[dict[str, Any]]:
+    palace = load_palace()
+    documents: list[dict[str, Any]] = [
+        {
+            "id": "museum:route",
+            "type": "museum",
+            "gallery_id": None,
+            "artifact_id": None,
+            "title": palace["museum"]["title"],
+            "source": "故宫博物院导览与本项目策展说明",
+            "text": " ".join(
                 [
-                    artifact["title"],
-                    artifact["period"],
-                    artifact["description"],
-                    artifact["image_hint"],
-                    gallery_text,
+                    palace["museum"]["subtitle"],
+                    palace["museum"]["opening"],
+                    palace["museum"]["route_note"],
                 ]
-            )
-            score = gallery_score + len(query_tokens & tokenize(artifact_text))
-            if artifact_id and artifact["id"] == artifact_id:
-                score += 12
-            candidates.append((score, gallery, artifact))
-    candidates.sort(key=lambda item: item[0], reverse=True)
-    _, gallery, artifact = candidates[0]
-    related = []
-    for score, rel_gallery, rel_artifact in candidates:
-        if len(related) >= 4:
-            break
-        if rel_gallery["id"] == gallery["id"] or score > 0:
-            related.append(
+            ),
+        }
+    ]
+    for gallery in palace["galleries"]:
+        persona = gallery["persona"]
+        gallery_text = " ".join(
+            [
+                f"{gallery['name']}位于{gallery['zone']}。",
+                gallery["summary"],
+                f"讲解人物为{persona['name']}，身份是{persona['role']}，表达特点是{persona['voice']}",
+            ]
+        )
+        documents.append(
+            {
+                "id": f"gallery:{gallery['id']}",
+                "type": "gallery",
+                "gallery_id": gallery["id"],
+                "artifact_id": None,
+                "gallery": gallery["name"],
+                "title": gallery["name"],
+                "source": gallery["source"],
+                "text": gallery_text,
+            }
+        )
+        for artifact in gallery["artifacts"]:
+            documents.append(
                 {
-                    "gallery_id": rel_gallery["id"],
-                    "gallery": rel_gallery["name"],
-                    "artifact_id": rel_artifact["id"],
-                    "title": rel_artifact["title"],
-                    "source": rel_artifact["source"],
-                    "evidence": rel_artifact["description"],
-                    "plain": rel_gallery["summary"],
+                    "id": f"artifact:{artifact['id']}",
+                    "type": "artifact",
+                    "gallery_id": gallery["id"],
+                    "artifact_id": artifact["id"],
+                    "gallery": gallery["name"],
+                    "title": artifact["title"],
+                    "source": artifact["source"],
+                    "text": " ".join(
+                        [
+                            f"{artifact['title']}属于{gallery['name']}，时代为{artifact['period']}。",
+                            artifact["description"],
+                            f"视觉线索：{artifact['image_hint']}。",
+                            f"展馆背景：{gallery['summary']}",
+                        ]
+                    ),
                 }
             )
-    return {"museum": palace["museum"], "gallery": gallery, "artifact": artifact, "contexts": related}
+    return documents
+
+
+def document_frequency(documents: list[dict[str, Any]]) -> dict[str, int]:
+    frequency: dict[str, int] = {}
+    for doc in documents:
+        for token in tokenize(f"{doc['title']} {doc['text']}"):
+            frequency[token] = frequency.get(token, 0) + 1
+    return frequency
+
+
+def retrieve_palace_contexts(
+    question: str,
+    gallery: dict[str, Any],
+    artifact: dict[str, Any],
+    limit: int = 6,
+) -> list[dict[str, Any]]:
+    documents = build_palace_documents()
+    df = document_frequency(documents)
+    expanded_query = " ".join(
+        [
+            question,
+            gallery["name"],
+            gallery["zone"],
+            artifact["title"],
+            artifact["period"],
+            artifact["image_hint"],
+        ]
+    )
+    query_tokens = tokenize(expanded_query)
+    total_docs = max(1, len(documents))
+    ranked: list[tuple[float, dict[str, Any]]] = []
+    for doc in documents:
+        doc_tokens = tokenize(f"{doc['title']} {doc['text']}")
+        overlap = query_tokens & doc_tokens
+        score = sum(math.log((total_docs + 1) / (df.get(token, 0) + 1)) + 1 for token in overlap)
+        if doc.get("gallery_id") == gallery["id"]:
+            score += 5.0
+        if doc.get("artifact_id") == artifact["id"]:
+            score += 9.0
+        if doc["title"] in question:
+            score += 4.0
+        if doc["type"] == "museum":
+            score += 0.5
+        if score > 0:
+            ranked.append((score, doc))
+    ranked.sort(key=lambda item: item[0], reverse=True)
+    return [
+        {
+            "id": doc["id"],
+            "type": doc["type"],
+            "gallery_id": doc.get("gallery_id"),
+            "gallery": doc.get("gallery", gallery["name"]),
+            "artifact_id": doc.get("artifact_id"),
+            "title": doc["title"],
+            "source": doc["source"],
+            "evidence": doc["text"],
+            "score": round(score, 3),
+        }
+        for score, doc in ranked[:limit]
+    ]
 
 
 def build_prompt(question: str, contexts: list[dict[str, Any]], mode: str) -> list[dict[str, str]]:
@@ -317,10 +408,33 @@ async def palace():
     return data
 
 
+@app.get("/api/palace/search")
+async def palace_search(q: str, gallery_id: str | None = None, artifact_id: str | None = None):
+    gallery = find_gallery(gallery_id)
+    artifact = find_artifact(gallery, artifact_id)
+    return {
+        "query": q,
+        "gallery_id": gallery["id"],
+        "artifact_id": artifact["id"],
+        "contexts": retrieve_palace_contexts(q, gallery, artifact),
+    }
+
+
 def build_palace_prompt(question: str, bundle: dict[str, Any], mode: str) -> list[dict[str, str]]:
     gallery = bundle["gallery"]
     artifact = bundle["artifact"]
     persona = gallery["persona"]
+    retrieved_text = "\n\n".join(
+        "\n".join(
+            [
+                f"【资料{i}】{item['title']}",
+                f"【类型】{item['type']}",
+                f"【来源】{item['source']}",
+                f"【内容】{item['evidence']}",
+            ]
+        )
+        for i, item in enumerate(bundle["contexts"], start=1)
+    )
     context_text = "\n".join(
         [
             f"【博物馆】{bundle['museum']['title']}",
@@ -333,17 +447,20 @@ def build_palace_prompt(question: str, bundle: dict[str, Any], mode: str) -> lis
             f"【讲解人物】{persona['name']}，身份：{persona['role']}，表达特点：{persona['voice']}",
         ]
     )
-    system = f"""你现在扮演“{persona['name']}”，身份是{persona['role']}，在故宫虚拟展馆中为观众讲解。
+    system = f"""你是故宫虚拟展馆的导览讲解员，当前讲解角度参考“{persona['name']}”（身份：{persona['role']}）。
 要求：
 1. 回答必须围绕当前展馆与当前文物，不得编造具体馆藏编号、尺寸、年代断语或不存在的出处。
-2. 可以用第一人称，但要让观众感觉是在听一位历史人物或宫廷相关人物讲述。
-3. 语言要有沉浸感，但保持清楚易懂，适合 30-60 秒语音播放。
-4. 若问题超出当前文物，可先简短回应，再引回当前展馆或相关历史语境。
-5. 不要说“根据资料库”“作为 AI”。"""
+2. 只能扩写“当前上下文”和“检索资料”中已经出现的信息，不得新增未给出的纹样、寓意、用途、图像细节、摆放位置或历史场景。
+3. 不要写成亲历回忆；不得使用“我平日”“曾置”“常置”“日日相对”等暗示具体使用事实的表达，除非资料中明确出现。
+4. 使用第三人称或导览员口吻，不要自称“我”“朕”，不要写舞台动作、括号旁白或戏剧台词。
+5. 语言要有沉浸感，但保持清楚易懂，适合 30-60 秒语音播放。
+6. 若问题超出当前文物，可先简短回应，再引回当前展馆或相关历史语境。
+7. 优先使用“检索资料”中的证据；资料不足时说“这里还不能断定”，不要硬编。
+8. 不要说“根据资料库”“作为 AI”。"""
     if mode == "intro":
-        user = f"请为观众生成当前文物的入馆讲解。\n\n{context_text}"
+        user = f"请为观众生成当前文物的入馆讲解。\n\n当前上下文：\n{context_text}\n\n检索资料：\n{retrieved_text}"
     else:
-        user = f"观众问题：{question}\n\n当前上下文：\n{context_text}"
+        user = f"观众问题：{question}\n\n当前上下文：\n{context_text}\n\n检索资料：\n{retrieved_text}"
     return [{"role": "system", "content": system}, {"role": "user", "content": user}]
 
 
@@ -351,11 +468,12 @@ def call_palace_llm(question: str, bundle: dict[str, Any], mode: str) -> str:
     gallery = bundle["gallery"]
     artifact = bundle["artifact"]
     if not API_KEY:
-        return f"诸位请看《{artifact['title']}》。{artifact['description']} 若从{gallery['persona']['name']}的眼中观之，此物不只是陈设，也是{gallery['name']}所要讲述的历史线索。"
+        evidence = bundle["contexts"][0]["evidence"] if bundle["contexts"] else artifact["description"]
+        return f"诸位请看《{artifact['title']}》。{evidence} 若从{gallery['persona']['name']}的眼中观之，此物不只是陈设，也是{gallery['name']}所要讲述的历史线索。"
     completion = client.chat.completions.create(
         model=os.getenv("DASHSCOPE_MODEL", "qwen-plus"),
         messages=build_palace_prompt(question, bundle, mode),
-        temperature=0.25,
+        temperature=0,
     )
     return completion.choices[0].message.content.strip()
 

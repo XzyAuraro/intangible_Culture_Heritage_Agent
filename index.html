@@ -545,6 +545,35 @@
       box-shadow: inset 0 1px 0 rgba(255,255,255,.58);
     }
 
+    .rag-sources {
+      display: none;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding: 12px;
+      border-radius: 16px;
+      background: rgba(255, 250, 240, .74);
+      border: 1px solid var(--line);
+    }
+
+    .rag-sources.active {
+      display: flex;
+    }
+
+    .source-chip {
+      max-width: 100%;
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: #fffdf8;
+      border: 1px solid rgba(99, 68, 44, .14);
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .source-chip strong {
+      color: var(--red-deep);
+    }
+
     .ai-form {
       margin-top: auto;
       display: grid;
@@ -684,6 +713,10 @@
       background: #fffdf8;
     }
 
+    .detail-ai .rag-sources {
+      margin-bottom: 12px;
+    }
+
     @media (max-width: 1100px) {
       body { overflow: auto; }
       .screen { height: auto; min-height: 100vh; overflow: visible; }
@@ -809,6 +842,7 @@
         <p id="galleryPersonaRole">进入展馆后出现对应历史人物。</p>
       </div>
       <div class="ai-output" id="galleryAiOutput">可以在展馆内直接提问，例如：这个展馆最值得先看什么？</div>
+      <div class="rag-sources" id="gallerySources"></div>
       <audio id="galleryAudio" controls></audio>
       <div class="ai-form">
         <input id="galleryQuestion" placeholder="向本馆讲解者提问">
@@ -845,6 +879,7 @@
       <div class="detail-ai">
         <h3 id="detailPersona">向讲解者提问</h3>
         <div class="ai-output" id="detailAiOutput">可以问：这件文物为什么重要？它和当时的宫廷生活有什么关系？</div>
+        <div class="rag-sources" id="detailSources"></div>
         <audio id="detailAudio" controls></audio>
         <div class="ai-form">
           <input id="detailQuestion" placeholder="围绕当前文物提问">
@@ -886,6 +921,29 @@
       const el = $(id);
       if (el) el.disabled = busy;
     });
+  }
+
+  function clearSources(scope) {
+    const sourceBox = scope === "detail" ? $("detailSources") : $("gallerySources");
+    sourceBox.classList.remove("active");
+    sourceBox.innerHTML = "";
+  }
+
+  function renderSources(scope, contexts = []) {
+    const sourceBox = scope === "detail" ? $("detailSources") : $("gallerySources");
+    const unique = [];
+    const seen = new Set();
+    contexts.forEach((item) => {
+      const key = `${item.title}-${item.source}`;
+      if (!seen.has(key)) {
+        unique.push(item);
+        seen.add(key);
+      }
+    });
+    sourceBox.innerHTML = unique.slice(0, 4).map((item) => `
+      <span class="source-chip"><strong>${item.title}</strong> · ${item.source}</span>
+    `).join("");
+    sourceBox.classList.toggle("active", unique.length > 0);
   }
 
   async function loadPalace() {
@@ -954,6 +1012,7 @@
     $("galleryPersonaRole").innerText = `${activeGallery.persona.role}。${activeGallery.persona.voice}`;
     $("galleryQuestion").value = `请介绍${activeGallery.name}最值得看的文物`;
     $("galleryAiOutput").innerText = "可以在展馆内直接提问，例如：这个展馆最值得先看什么？";
+    clearSources("gallery");
     $("galleryAudio").removeAttribute("src");
     renderArtifacts();
     showScreen("galleryScreen");
@@ -994,6 +1053,7 @@
     $("detailPersona").innerText = `向${activeGallery.persona.name}提问`;
     $("detailQuestion").value = `这件${activeArtifact.title}为什么重要？`;
     $("detailAiOutput").innerText = "可以问：这件文物为什么重要？它和当时的宫廷生活有什么关系？";
+    clearSources("detail");
     $("detailAudio").removeAttribute("src");
     showScreen("detailScreen");
   }
@@ -1023,6 +1083,7 @@
       const data = await res.json();
       if (data.status !== "success") throw new Error(data.message || "生成失败");
       output.innerText = data.speech_text;
+      renderSources(scope, data.contexts || []);
       audio.src = data.audio_url + "?t=" + Date.now();
       audio.load();
       setTimeout(() => {
