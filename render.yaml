@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: intangible-culture-heritage-agent
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DASHSCOPE_BASE_URL
+        value: https://dashscope.aliyuncs.com/compatible-mode/v1
+      - key: DASHSCOPE_MODEL
+        value: qwen-plus
+      - key: EDGE_TTS_VOICE
+        value: zh-CN-YunxiNeural
+      - key: DASHSCOPE_API_KEY
+        sync: false

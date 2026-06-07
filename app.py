@@ -9,7 +9,7 @@ from typing import Any
 import edge_tts
 from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from openai import OpenAI
 from pydantic import BaseModel
@@ -384,6 +384,16 @@ async def health():
     return {"status": "ok", "has_api_key": bool(API_KEY)}
 
 
+@app.get("/")
+async def home():
+    return FileResponse(ROOT / "index.html")
+
+
+@app.get("/index.html")
+async def index_page():
+    return FileResponse(ROOT / "index.html")
+
+
 @app.get("/api/museum")
 async def museum():
     knowledge = load_knowledge()
@@ -559,4 +569,5 @@ async def chat_json(payload: ChatRequest):
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    port = int(os.getenv("PORT", "8000"))
+    uvicorn.run(app, host="0.0.0.0", port=port)
