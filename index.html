@@ -386,15 +386,15 @@
     .artifact-carousel {
       margin-top: 16px;
       display: flex;
-      gap: 18px;
+      gap: 22px;
       overflow-x: auto;
       scroll-snap-type: x mandatory;
-      padding: 4px 4px 24px;
+      padding: 4px 4px 30px;
     }
 
     .artifact-tile {
-      flex: 0 0 290px;
-      min-height: 360px;
+      flex: 0 0 clamp(286px, 31vw, 360px);
+      min-height: 430px;
       scroll-snap-align: start;
       border-radius: 22px;
       overflow: hidden;
@@ -415,16 +415,11 @@
     }
 
     .artifact-visual {
-      height: 190px;
-      display: grid;
-      place-items: center;
-      padding: 22px;
-      text-align: center;
-      color: #fff5df;
+      height: 245px;
       background: linear-gradient(135deg, #732e2a, #c09652);
-      font-size: 20px;
-      font-weight: 900;
-      line-height: 1.35;
+      background-image: url("assets/artifact-sprite-generated.png");
+      background-position: var(--artifact-x, 0%) var(--artifact-y, 0%);
+      background-size: 600% 300%;
       position: relative;
       overflow: hidden;
     }
@@ -438,16 +433,31 @@
       pointer-events: none;
     }
 
+    .artifact-visual::after {
+      content: "";
+      position: absolute;
+      inset: auto 0 0;
+      height: 34%;
+      background: linear-gradient(0deg, rgba(38, 24, 16, .22), transparent);
+      pointer-events: none;
+    }
+
     .artifact-tile:nth-child(2n) .artifact-visual {
       background: linear-gradient(135deg, #31576e, #7e765c);
+      background-image: url("assets/artifact-sprite-generated.png");
+      background-position: var(--artifact-x, 0%) var(--artifact-y, 0%);
+      background-size: 600% 300%;
     }
 
     .artifact-tile:nth-child(3n) .artifact-visual {
       background: linear-gradient(135deg, #365f54, #b78d45);
+      background-image: url("assets/artifact-sprite-generated.png");
+      background-position: var(--artifact-x, 0%) var(--artifact-y, 0%);
+      background-size: 600% 300%;
     }
 
     .artifact-copy {
-      padding: 18px;
+      padding: 20px;
     }
 
     .artifact-copy strong {
@@ -575,27 +585,36 @@
       place-items: center;
       padding: 42px;
       background:
-        radial-gradient(circle at 50% 40%, rgba(255,248,234,0.28), rgba(72,28,24,0.74)),
-        linear-gradient(135deg, #57231f, #a7773f);
+        linear-gradient(90deg, rgba(72,28,24,0.18), rgba(54,95,84,0.12)),
+        radial-gradient(circle at 50% 40%, rgba(255,248,234,0.5), rgba(72,28,24,0.42)),
+        #cdbd9d;
       color: var(--ivory);
     }
 
     .artifact-object {
-      width: min(520px, 70vw);
-      aspect-ratio: 1 / 1;
+      width: min(680px, 76vw);
+      aspect-ratio: 4 / 3;
       display: grid;
       place-items: center;
-      padding: 42px;
-      border-radius: 42px;
-      text-align: center;
+      padding: 0;
+      border-radius: 32px;
       background:
+        url("assets/artifact-sprite-generated.png"),
         linear-gradient(145deg, rgba(255, 248, 234, 0.18), rgba(255, 248, 234, 0.07));
+      background-position: var(--artifact-x, 0%) var(--artifact-y, 0%);
+      background-size: 600% 300%;
       border: 1px solid rgba(255, 248, 234, 0.25);
       box-shadow: var(--shadow);
-      font-size: clamp(28px, 4vw, 52px);
-      line-height: 1.25;
-      font-weight: 900;
       position: relative;
+      overflow: hidden;
+    }
+
+    .artifact-object::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, transparent 62%, rgba(28, 18, 13, .22));
+      pointer-events: none;
     }
 
     .artifact-object::after {
@@ -700,10 +719,27 @@
         bottom: 16px;
       }
       .museum-nav {
-        padding: 0 14px;
+        height: auto;
+        min-height: 68px;
+        padding: 12px 14px;
+        align-items: flex-start;
+        flex-direction: column;
+        justify-content: center;
+      }
+      .nav-title {
+        min-width: 0;
+      }
+      .nav-actions {
+        width: 100%;
+        justify-content: flex-start;
+        flex-wrap: wrap;
       }
       .gallery-main, .detail-copy {
         padding: 20px;
+      }
+      .section-row {
+        align-items: flex-start;
+        flex-direction: column;
       }
       .artifact-tile {
         flex-basis: 250px;
@@ -832,9 +868,12 @@
   let activeVoiceTarget = null;
   let recognition = null;
   let transcript = "";
+  let artifactOrder = [];
 
   const $ = (id) => document.getElementById(id);
   const screens = ["gateScreen", "mapScreen", "galleryScreen", "detailScreen"];
+  const spriteColumns = 6;
+  const spriteRows = 3;
 
   function showScreen(id) {
     screens.forEach((screenId) => $(screenId).classList.toggle("active", screenId === id));
@@ -853,6 +892,7 @@
     const res = await fetch(`${API_BASE}/api/palace`);
     palace = await res.json();
     galleries = palace.galleries;
+    artifactOrder = galleries.flatMap((gallery) => gallery.artifacts.map((artifact) => artifact.id));
     $("mapTitle").innerText = palace.museum.title;
     $("mapOpening").innerText = palace.museum.opening;
     $("routeNote").innerText = palace.museum.route_note;
@@ -893,6 +933,15 @@
     });
   }
 
+  function artifactSpriteVars(artifact) {
+    const index = Math.max(0, artifactOrder.indexOf(artifact.id));
+    const col = index % spriteColumns;
+    const row = Math.floor(index / spriteColumns) % spriteRows;
+    const x = spriteColumns === 1 ? 0 : (col / (spriteColumns - 1)) * 100;
+    const y = spriteRows === 1 ? 0 : (row / (spriteRows - 1)) * 100;
+    return `--artifact-x: ${x}%; --artifact-y: ${y}%;`;
+  }
+
   function openGallery(galleryId) {
     activeGallery = galleries.find((gallery) => gallery.id === galleryId) || galleries[0];
     activeArtifact = activeGallery.artifacts[0];
@@ -917,7 +966,7 @@
       const tile = document.createElement("button");
       tile.className = "artifact-tile";
       tile.innerHTML = `
-        <div class="artifact-visual">${artifact.image_hint}</div>
+        <div class="artifact-visual" style="${artifactSpriteVars(artifact)}" role="img" aria-label="${artifact.title}：${artifact.image_hint}"></div>
         <div class="artifact-copy">
           <strong>${artifact.title}</strong>
           <span>${artifact.period}</span>
@@ -936,7 +985,11 @@
     $("detailTitle").innerText = activeArtifact.title;
     $("detailPeriod").innerText = activeArtifact.period;
     $("detailDescription").innerText = activeArtifact.description;
-    $("detailVisual").innerText = activeArtifact.image_hint;
+    const detailVisual = $("detailVisual");
+    detailVisual.innerText = "";
+    detailVisual.style.cssText = artifactSpriteVars(activeArtifact);
+    detailVisual.setAttribute("aria-label", `${activeArtifact.title}：${activeArtifact.image_hint}`);
+    detailVisual.setAttribute("role", "img");
     $("detailSource").innerText = `出处：${activeArtifact.source}`;
     $("detailPersona").innerText = `向${activeGallery.persona.name}提问`;
     $("detailQuestion").value = `这件${activeArtifact.title}为什么重要？`;
