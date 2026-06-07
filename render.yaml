@@ -12,5 +12,5 @@ services:
         value: qwen-plus
       - key: EDGE_TTS_VOICE
         value: zh-CN-YunxiNeural
-      - key: DASHSCOPE_API_KEY
+      - key: CULTURE_AGENT_DASHSCOPE_API_KEY
         sync: false

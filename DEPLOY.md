@@ -14,12 +14,13 @@ uvicorn app:app --host 0.0.0.0 --port $PORT
 4. Add this environment variable in Render:
 
 ```bash
-DASHSCOPE_API_KEY=your_key_here
+CULTURE_AGENT_DASHSCOPE_API_KEY=your_key_here
 ```
 
 Optional environment variables:
 
 ```bash
+DASHSCOPE_API_KEY=your_general_dashscope_key_if_you_do_not_use_the_project_specific_key
 DASHSCOPE_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
 DASHSCOPE_MODEL=qwen-plus
 EDGE_TTS_VOICE=zh-CN-YunxiNeural

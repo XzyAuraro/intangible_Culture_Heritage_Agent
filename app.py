@@ -50,7 +50,11 @@ app.mount("/static", StaticFiles(directory=AUDIO_DIR), name="static")
 app.mount("/assets", StaticFiles(directory=ROOT / "assets"), name="assets")
 
 
-API_KEY = os.getenv("DASHSCOPE_API_KEY") or os.getenv("ALIYUN_API_KEY")
+API_KEY = (
+    os.getenv("CULTURE_AGENT_DASHSCOPE_API_KEY")
+    or os.getenv("DASHSCOPE_API_KEY")
+    or os.getenv("ALIYUN_API_KEY")
+)
 client = OpenAI(
     api_key=API_KEY or "missing-key",
     base_url=os.getenv("DASHSCOPE_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1"),
