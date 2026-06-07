@@ -486,6 +486,7 @@
       position: sticky;
       top: 68px;
       height: calc(100vh - 68px);
+      min-height: 0;
       border-left: 1px solid var(--line);
       background:
         radial-gradient(circle at 20% 0%, rgba(196, 154, 85, .16), transparent 28%),
@@ -495,6 +496,9 @@
       display: flex;
       flex-direction: column;
       gap: 18px;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      scrollbar-gutter: stable;
     }
 
     .persona-card {
@@ -534,6 +538,7 @@
 
     .ai-output {
       min-height: 190px;
+      max-height: min(34vh, 330px);
       padding: 18px;
       border-radius: 20px;
       background: #fffaf0;
@@ -553,6 +558,9 @@
       border-radius: 16px;
       background: rgba(255, 250, 240, .74);
       border: 1px solid var(--line);
+      max-height: 132px;
+      overflow-y: auto;
+      flex: 0 0 auto;
     }
 
     .rag-sources.active {
@@ -575,9 +583,10 @@
     }
 
     .ai-form {
-      margin-top: auto;
+      margin-top: 0;
       display: grid;
       gap: 10px;
+      flex: 0 0 auto;
     }
 
     .ai-form input {
@@ -599,6 +608,7 @@
     audio {
       width: 100%;
       margin-top: 2px;
+      flex: 0 0 auto;
     }
 
     .detail-layout {
@@ -842,8 +852,8 @@
         <p id="galleryPersonaRole">进入展馆后出现对应历史人物。</p>
       </div>
       <div class="ai-output" id="galleryAiOutput">可以在展馆内直接提问，例如：这个展馆最值得先看什么？</div>
-      <div class="rag-sources" id="gallerySources"></div>
       <audio id="galleryAudio" controls></audio>
+      <div class="rag-sources" id="gallerySources"></div>
       <div class="ai-form">
         <input id="galleryQuestion" placeholder="向本馆讲解者提问">
         <div class="ai-buttons">
@@ -879,8 +889,8 @@
       <div class="detail-ai">
         <h3 id="detailPersona">向讲解者提问</h3>
         <div class="ai-output" id="detailAiOutput">可以问：这件文物为什么重要？它和当时的宫廷生活有什么关系？</div>
-        <div class="rag-sources" id="detailSources"></div>
         <audio id="detailAudio" controls></audio>
+        <div class="rag-sources" id="detailSources"></div>
         <div class="ai-form">
           <input id="detailQuestion" placeholder="围绕当前文物提问">
           <div class="ai-buttons">
