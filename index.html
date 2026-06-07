@@ -605,6 +605,30 @@
       flex-wrap: wrap;
     }
 
+    .voice-status {
+      display: none;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: rgba(142, 47, 40, .08);
+      border: 1px solid rgba(142, 47, 40, .18);
+      color: var(--red-deep);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .voice-status.active {
+      display: block;
+    }
+
+    .voice-status strong {
+      display: block;
+      margin-bottom: 3px;
+    }
+
+    .voice-status span {
+      color: var(--muted);
+    }
+
     audio {
       width: 100%;
       margin-top: 2px;
@@ -860,6 +884,7 @@
           <button class="primary-btn" id="galleryAskBtn">提问</button>
           <button class="ghost-btn" id="galleryVoiceBtn">语音</button>
         </div>
+        <div class="voice-status" id="galleryVoiceStatus" aria-live="polite"></div>
       </div>
     </aside>
   </div>
@@ -898,6 +923,7 @@
             <button class="primary-btn" id="detailAskBtn">提问</button>
             <button class="ghost-btn" id="detailVoiceBtn">语音</button>
           </div>
+          <div class="voice-status" id="detailVoiceStatus" aria-live="polite"></div>
         </div>
       </div>
     </main>
@@ -958,6 +984,12 @@
       <span class="source-chip"><strong>${item.title}</strong> · ${item.source}</span>
     `).join("");
     sourceBox.classList.toggle("active", unique.length > 0);
+  }
+
+  function setVoiceStatus(scope, title, text = "", active = true) {
+    const box = scope === "detail" ? $("detailVoiceStatus") : $("galleryVoiceStatus");
+    box.innerHTML = title ? `<strong>${title}</strong><span>${text}</span>` : "";
+    box.classList.toggle("active", active && Boolean(title));
   }
 
   async function loadPalace() {
@@ -1129,19 +1161,67 @@
     if (!SpeechRecognition) {
       $("galleryVoiceBtn").disabled = true;
       $("detailVoiceBtn").disabled = true;
+      setVoiceStatus("gallery", "当前浏览器不支持语音识别", "请使用 Chrome 或 Edge，并允许麦克风权限。");
+      setVoiceStatus("detail", "当前浏览器不支持语音识别", "请使用 Chrome 或 Edge，并允许麦克风权限。");
       return;
     }
     recognition = new SpeechRecognition();
     recognition.lang = "zh-CN";
     recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.onstart = () => {
+      const scope = activeVoiceTarget || "gallery";
+      transcript = "";
+      setVoiceStatus(scope, "正在听，请开始说话", "识别到的文字会实时显示在这里。");
+    };
     recognition.onresult = (event) => {
-      transcript = event.results[0][0].transcript;
+      let interim = "";
+      let finalText = "";
+      for (let i = event.resultIndex; i < event.results.length; i += 1) {
+        const text = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalText += text;
+        } else {
+          interim += text;
+        }
+      }
+      transcript = finalText || interim || transcript;
+      const scope = activeVoiceTarget || "gallery";
       const input = activeVoiceTarget === "detail" ? $("detailQuestion") : $("galleryQuestion");
       input.value = transcript;
+      setVoiceStatus(scope, finalText ? "已识别到语音" : "正在识别", transcript || "继续说，我在听。");
+    };
+    recognition.onerror = (event) => {
+      const scope = activeVoiceTarget || "gallery";
+      const tips = {
+        "not-allowed": "浏览器没有麦克风权限，请在地址栏允许麦克风后重试。",
+        "no-speech": "没有听到清晰语音，可以靠近麦克风再试一次。",
+        "audio-capture": "没有检测到可用麦克风，请检查系统输入设备。",
+        "network": "浏览器语音识别服务连接失败，请稍后重试。",
+      };
+      setVoiceStatus(scope, "语音识别失败", tips[event.error] || `错误：${event.error}`);
     };
     recognition.onend = () => {
-      if (transcript) ask(activeVoiceTarget || "gallery");
+      const scope = activeVoiceTarget || "gallery";
+      if (transcript) {
+        setVoiceStatus(scope, "识别完成，正在提问", transcript);
+        ask(scope);
+      } else {
+        setVoiceStatus(scope, "没有识别到文字", "请再点击语音按钮试一次。");
+      }
     };
+  }
+
+  function startVoice(scope) {
+    activeVoiceTarget = scope;
+    transcript = "";
+    setVoiceStatus(scope, "正在请求麦克风权限", "如果浏览器弹出提示，请选择允许。");
+    if (!recognition) return;
+    try {
+      recognition.start();
+    } catch (err) {
+      setVoiceStatus(scope, "语音识别已在运行", "请说完当前这句话，或稍等一秒后再试。");
+    }
   }
 
   $("enterBtn").onclick = () => showScreen("mapScreen");
@@ -1154,14 +1234,10 @@
   $("detailIntroBtn").onclick = () => ask("detail", "intro");
   $("detailAskBtn").onclick = () => ask("detail", "chat");
   $("galleryVoiceBtn").onclick = () => {
-    activeVoiceTarget = "gallery";
-    transcript = "";
-    recognition && recognition.start();
+    startVoice("gallery");
   };
   $("detailVoiceBtn").onclick = () => {
-    activeVoiceTarget = "detail";
-    transcript = "";
-    recognition && recognition.start();
+    startVoice("detail");
   };
 
   setupVoice();
