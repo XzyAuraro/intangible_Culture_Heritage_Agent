@@ -194,6 +194,18 @@ def find_artifact(gallery: dict[str, Any], artifact_id: str | None) -> dict[str,
     return artifacts[0]
 
 
+def get_artifact_persona(gallery: dict[str, Any], artifact: dict[str, Any]) -> dict[str, Any]:
+    trigger = artifact.get("personaTrigger") or {}
+    persona = trigger.get("persona") or gallery["persona"]
+    return {
+        **persona,
+        "trigger_reason": trigger.get("reason", ""),
+        "trigger_tone": trigger.get("tone", ""),
+        "trigger_topics": trigger.get("topics", []),
+        "trigger_keywords": trigger.get("keywords", []),
+    }
+
+
 def retrieve_palace(question: str, gallery_id: str | None = None, artifact_id: str | None = None) -> dict[str, Any]:
     palace = load_palace()
     gallery = find_gallery(gallery_id)
@@ -246,6 +258,7 @@ def build_palace_documents() -> list[dict[str, Any]]:
             }
         )
         for artifact in gallery["artifacts"]:
+            artifact_persona = get_artifact_persona(gallery, artifact)
             documents.append(
                 {
                     "id": f"artifact:{artifact['id']}",
@@ -261,6 +274,8 @@ def build_palace_documents() -> list[dict[str, Any]]:
                             artifact["description"],
                             f"视觉线索：{artifact['image_hint']}。",
                             f"展馆背景：{gallery['summary']}",
+                            f"文物绑定讲解人物为{artifact_persona['name']}，身份是{artifact_persona['role']}，表达特点是{artifact_persona['voice']}。",
+                            f"角色触发原因：{artifact_persona.get('trigger_reason', '')}。适合话题：{'、'.join(artifact_persona.get('trigger_topics', []))}。",
                         ]
                     ),
                 }
@@ -360,12 +375,21 @@ def call_llm(question: str, contexts: list[dict[str, Any]], mode: str) -> str:
 
 
 async def synthesize(text: str) -> str:
+    clean_text = sanitize_tts_text(text)
     audio_name = f"response_{uuid.uuid4().hex}.mp3"
     audio_path = AUDIO_DIR / audio_name
     voice = os.getenv("EDGE_TTS_VOICE", "zh-CN-YunxiNeural")
-    communicate = edge_tts.Communicate(text, voice)
+    communicate = edge_tts.Communicate(clean_text, voice)
     await communicate.save(str(audio_path))
     return f"/static/{audio_name}"
+
+
+def sanitize_tts_text(text: str) -> str:
+    clean_text = text.replace("——", "，").replace("……", "。")
+    clean_text = clean_text.replace("《", "").replace("》", "")
+    clean_text = re.sub(r"[<>\[\]{}|\\^`]", "", clean_text)
+    clean_text = re.sub(r"\s+", " ", clean_text).strip()
+    return clean_text or "讲解内容暂时为空。"
 
 
 class ChatRequest(BaseModel):
@@ -437,7 +461,7 @@ async def palace_search(q: str, gallery_id: str | None = None, artifact_id: str 
 def build_palace_prompt(question: str, bundle: dict[str, Any], mode: str) -> list[dict[str, str]]:
     gallery = bundle["gallery"]
     artifact = bundle["artifact"]
-    persona = gallery["persona"]
+    persona = get_artifact_persona(gallery, artifact)
     retrieved_text = "\n\n".join(
         "\n".join(
             [
@@ -459,14 +483,16 @@ def build_palace_prompt(question: str, bundle: dict[str, Any], mode: str) -> lis
             f"【视觉线索】{artifact['image_hint']}",
             f"【来源】{artifact['source']}",
             f"【讲解人物】{persona['name']}，身份：{persona['role']}，表达特点：{persona['voice']}",
+            f"【文物触发原因】{persona.get('trigger_reason', '')}",
+            f"【专属话题】{'、'.join(persona.get('trigger_topics', []))}",
         ]
     )
     system = f"""你是故宫虚拟展馆的导览讲解员，当前讲解角度参考“{persona['name']}”（身份：{persona['role']}）。
 要求：
 1. 回答必须围绕当前展馆与当前文物，不得编造具体馆藏编号、尺寸、年代断语或不存在的出处。
 2. 只能扩写“当前上下文”和“检索资料”中已经出现的信息，不得新增未给出的纹样、寓意、用途、图像细节、摆放位置或历史场景。
-3. 不要写成亲历回忆；不得使用“我平日”“曾置”“常置”“日日相对”等暗示具体使用事实的表达，除非资料中明确出现。
-4. 使用第三人称或导览员口吻，不要自称“我”“朕”，不要写舞台动作、括号旁白或戏剧台词。
+3. 可以体现讲解人物的身份、关注点和语气，但不得写成亲历回忆；不得使用“我平日”“曾置”“常置”“日日相对”等暗示具体使用事实的表达，除非资料中明确出现。
+4. 不要写舞台动作、括号旁白或戏剧台词；可少量使用符合身份的称谓，但不要让角色扮演压过文物事实。
 5. 语言要有沉浸感，但保持清楚易懂，适合 30-60 秒语音播放。
 6. 若问题超出当前文物，可先简短回应，再引回当前展馆或相关历史语境。
 7. 优先使用“检索资料”中的证据；资料不足时说“这里还不能断定”，不要硬编。
@@ -479,8 +505,6 @@ def build_palace_prompt(question: str, bundle: dict[str, Any], mode: str) -> lis
 
 
 def call_palace_llm(question: str, bundle: dict[str, Any], mode: str) -> str:
-    gallery = bundle["gallery"]
-    artifact = bundle["artifact"]
     if not API_KEY:
         return build_palace_fallback(bundle)
     completion = client.chat.completions.create(
@@ -494,10 +518,11 @@ def call_palace_llm(question: str, bundle: dict[str, Any], mode: str) -> str:
 def build_palace_fallback(bundle: dict[str, Any]) -> str:
     gallery = bundle["gallery"]
     artifact = bundle["artifact"]
+    persona = get_artifact_persona(gallery, artifact)
     evidence_items = [item["evidence"] for item in bundle["contexts"][:2]]
     evidence = " ".join(evidence_items) if evidence_items else artifact["description"]
     return (
-        f"请看《{artifact['title']}》。{artifact['description']}"
+        f"{persona['name']}请诸位看《{artifact['title']}》。{artifact['description']}"
         f"它所在的{gallery['name']}强调的是：{gallery['summary']}"
         f"可参考的资料线索包括：{evidence}"
     )
@@ -528,7 +553,7 @@ async def palace_chat(payload: PalaceChatRequest):
         "gallery_name": gallery["name"],
         "artifact_id": artifact["id"],
         "artifact_title": artifact["title"],
-        "persona": gallery["persona"],
+        "persona": get_artifact_persona(gallery, artifact),
         "speech_text": speech_text,
         "plain_text": artifact["description"],
         "source": artifact["source"],

@@ -475,6 +475,20 @@
       font-size: 13px;
     }
 
+    .persona-pill {
+      display: inline-flex;
+      max-width: 100%;
+      margin-bottom: 12px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      color: var(--red-deep);
+      background: rgba(142, 47, 40, .08);
+      border: 1px solid rgba(142, 47, 40, .16);
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1.3;
+    }
+
     .artifact-copy p {
       margin-bottom: 0;
       color: var(--muted);
@@ -857,7 +871,7 @@
     <div class="eyebrow">Palace Museum Agent</div>
     <h1>故宫虚拟展馆</h1>
     <p>登录后进入全屏宫城地图。选择展馆、滑动文物、进入详情，并向对应历史人物提问。</p>
-    <button class="primary-btn" id="enterBtn">观众登录并进入</button>
+    <button type="button" class="primary-btn" id="enterBtn">观众登录并进入</button>
   </div>
 </section>
 
@@ -870,7 +884,7 @@
       <p id="mapOpening">点击地图中的展馆入口，进入展馆内部。</p>
     </div>
     <div class="map-actions">
-      <button class="text-btn" id="backGateBtn">退出</button>
+      <button type="button" class="text-btn" id="backGateBtn">退出</button>
     </div>
   </div>
   <div id="pinLayer"></div>
@@ -884,7 +898,7 @@
       <span id="galleryNavSub">选择文物进入详情，或直接向讲解者提问</span>
     </div>
     <div class="nav-actions">
-      <button class="ghost-btn" id="galleryBackMapBtn">返回地图</button>
+      <button type="button" class="ghost-btn" id="galleryBackMapBtn">返回地图</button>
     </div>
   </nav>
   <div class="gallery-layout">
@@ -899,7 +913,7 @@
           <h2>馆藏文物</h2>
           <p>横向滑动选择文物，点击卡片进入详情。</p>
         </div>
-        <button class="ghost-btn" id="galleryIntroBtn">请讲解本馆</button>
+        <button type="button" class="ghost-btn" id="galleryIntroBtn">请讲解本馆</button>
       </div>
       <div class="artifact-carousel" id="artifactCarousel"></div>
     </main>
@@ -916,8 +930,8 @@
       <div class="ai-form">
         <input id="galleryQuestion" placeholder="向本馆讲解者提问">
         <div class="ai-buttons">
-          <button class="primary-btn" id="galleryAskBtn">提问</button>
-          <button class="ghost-btn" id="galleryVoiceBtn">语音</button>
+          <button type="button" class="primary-btn" id="galleryAskBtn">提问</button>
+          <button type="button" class="ghost-btn" id="galleryVoiceBtn">语音</button>
         </div>
         <div class="voice-status" id="galleryVoiceStatus" aria-live="polite"></div>
       </div>
@@ -932,8 +946,8 @@
       <span id="detailNavSub">详情页同样可以向当前历史人物提问</span>
     </div>
     <div class="nav-actions">
-      <button class="ghost-btn" id="detailBackGalleryBtn">返回展馆</button>
-      <button class="ghost-btn" id="detailBackMapBtn">返回地图</button>
+      <button type="button" class="ghost-btn" id="detailBackGalleryBtn">返回展馆</button>
+      <button type="button" class="ghost-btn" id="detailBackMapBtn">返回地图</button>
     </div>
   </nav>
   <div class="detail-layout">
@@ -955,9 +969,9 @@
         <div class="ai-form">
           <input id="detailQuestion" placeholder="围绕当前文物提问">
           <div class="ai-buttons">
-            <button class="primary-btn" id="detailIntroBtn">讲解文物</button>
-            <button class="primary-btn" id="detailAskBtn">提问</button>
-            <button class="ghost-btn" id="detailVoiceBtn">语音</button>
+            <button type="button" class="primary-btn" id="detailIntroBtn">讲解文物</button>
+            <button type="button" class="primary-btn" id="detailAskBtn">提问</button>
+            <button type="button" class="ghost-btn" id="detailVoiceBtn">语音</button>
           </div>
           <div class="voice-status" id="detailVoiceStatus" aria-live="polite"></div>
         </div>
@@ -1088,16 +1102,25 @@
     return `--artifact-x: ${x}%; --artifact-y: ${y}%;`;
   }
 
+  function getArtifactPersona(artifact, gallery = activeGallery) {
+    return artifact?.personaTrigger?.persona || gallery?.persona || { name: "讲解者", role: "", voice: "" };
+  }
+
+  function personaSummary(persona) {
+    return [persona.role, persona.voice].filter(Boolean).join("。");
+  }
+
   function openGallery(galleryId) {
     activeGallery = galleries.find((gallery) => gallery.id === galleryId) || galleries[0];
     activeArtifact = activeGallery.artifacts[0];
+    const persona = getArtifactPersona(activeArtifact, activeGallery);
     $("galleryNavTitle").innerText = activeGallery.name;
     $("galleryZone").innerText = activeGallery.zone;
     $("galleryTitle").innerText = activeGallery.name;
     $("gallerySummary").innerText = activeGallery.summary;
-    $("galleryAvatar").innerText = activeGallery.persona.name.slice(0, 1);
-    $("galleryPersonaName").innerText = activeGallery.persona.name;
-    $("galleryPersonaRole").innerText = `${activeGallery.persona.role}。${activeGallery.persona.voice}`;
+    $("galleryAvatar").innerText = persona.name.slice(0, 1);
+    $("galleryPersonaName").innerText = persona.name;
+    $("galleryPersonaRole").innerText = personaSummary(persona);
     $("galleryQuestion").value = `请介绍${activeGallery.name}最值得看的文物`;
     $("galleryAiOutput").innerText = "可以在展馆内直接提问，例如：这个展馆最值得先看什么？";
     clearSources("gallery");
@@ -1111,13 +1134,16 @@
     const carousel = $("artifactCarousel");
     carousel.innerHTML = "";
     activeGallery.artifacts.forEach((artifact) => {
+      const persona = getArtifactPersona(artifact, activeGallery);
       const tile = document.createElement("button");
+      tile.type = "button";
       tile.className = "artifact-tile";
       tile.innerHTML = `
         <div class="artifact-visual" style="${artifactSpriteVars(artifact)}" role="img" aria-label="${artifact.title}：${artifact.image_hint}"></div>
         <div class="artifact-copy">
           <strong>${artifact.title}</strong>
           <span>${artifact.period}</span>
+          <div class="persona-pill">由${persona.name}讲解</div>
           <p>${artifact.description}</p>
         </div>
       `;
@@ -1128,6 +1154,7 @@
 
   function openDetail(artifactId) {
     activeArtifact = activeGallery.artifacts.find((artifact) => artifact.id === artifactId) || activeGallery.artifacts[0];
+    const persona = getArtifactPersona(activeArtifact, activeGallery);
     $("detailNavTitle").innerText = activeArtifact.title;
     $("detailGallery").innerText = activeGallery.name;
     $("detailTitle").innerText = activeArtifact.title;
@@ -1139,7 +1166,7 @@
     detailVisual.setAttribute("aria-label", `${activeArtifact.title}：${activeArtifact.image_hint}`);
     detailVisual.setAttribute("role", "img");
     $("detailSource").innerText = `出处：${activeArtifact.source}`;
-    $("detailPersona").innerText = `向${activeGallery.persona.name}提问`;
+    $("detailPersona").innerText = `向${persona.name}提问`;
     $("detailQuestion").value = `这件${activeArtifact.title}为什么重要？`;
     $("detailAiOutput").innerText = "可以问：这件文物为什么重要？它和当时的宫廷生活有什么关系？";
     clearSources("detail");
@@ -1282,19 +1309,60 @@
     }
   }
 
-  $("enterBtn").onclick = () => showScreen("mapScreen");
-  $("backGateBtn").onclick = () => showScreen("gateScreen");
-  $("galleryBackMapBtn").onclick = () => showScreen("mapScreen");
-  $("detailBackGalleryBtn").onclick = () => showScreen("galleryScreen");
-  $("detailBackMapBtn").onclick = () => showScreen("mapScreen");
-  $("galleryIntroBtn").onclick = () => ask("gallery", "intro");
-  $("galleryAskBtn").onclick = () => ask("gallery", "chat");
-  $("detailIntroBtn").onclick = () => ask("detail", "intro");
-  $("detailAskBtn").onclick = () => ask("detail", "chat");
-  $("galleryVoiceBtn").onclick = () => {
+  $("enterBtn").onclick = (event) => {
+    event.preventDefault();
+    showScreen("mapScreen");
+  };
+  $("backGateBtn").onclick = (event) => {
+    event.preventDefault();
+    showScreen("gateScreen");
+  };
+  $("galleryBackMapBtn").onclick = (event) => {
+    event.preventDefault();
+    showScreen("mapScreen");
+  };
+  $("detailBackGalleryBtn").onclick = (event) => {
+    event.preventDefault();
+    showScreen("galleryScreen");
+  };
+  $("detailBackMapBtn").onclick = (event) => {
+    event.preventDefault();
+    showScreen("mapScreen");
+  };
+  $("galleryIntroBtn").onclick = (event) => {
+    event.preventDefault();
+    ask("gallery", "intro");
+  };
+  $("galleryAskBtn").onclick = (event) => {
+    event.preventDefault();
+    ask("gallery", "chat");
+  };
+  $("detailIntroBtn").onclick = (event) => {
+    event.preventDefault();
+    ask("detail", "intro");
+  };
+  $("detailAskBtn").onclick = (event) => {
+    event.preventDefault();
+    ask("detail", "chat");
+  };
+  $("galleryQuestion").onkeydown = (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      ask("gallery", "chat");
+    }
+  };
+  $("detailQuestion").onkeydown = (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      ask("detail", "chat");
+    }
+  };
+  $("galleryVoiceBtn").onclick = (event) => {
+    event.preventDefault();
     startVoice("gallery");
   };
-  $("detailVoiceBtn").onclick = () => {
+  $("detailVoiceBtn").onclick = (event) => {
+    event.preventDefault();
     startVoice("detail");
   };
 
