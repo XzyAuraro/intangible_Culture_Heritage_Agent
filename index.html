@@ -687,6 +687,167 @@
       color: var(--red-deep);
     }
 
+    .guide-widget {
+      position: fixed;
+      right: clamp(14px, 2.4vw, 34px);
+      bottom: clamp(14px, 2.4vw, 30px);
+      z-index: 40;
+      width: min(330px, calc(100vw - 28px));
+      display: grid;
+      grid-template-columns: 86px minmax(0, 1fr);
+      gap: 12px;
+      align-items: end;
+      pointer-events: none;
+      opacity: 0;
+      transform: translateY(14px);
+      transition: opacity 180ms ease, transform 180ms ease;
+    }
+
+    .guide-widget.active {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .guide-figure {
+      position: relative;
+      width: 86px;
+      height: 128px;
+      filter: drop-shadow(0 18px 20px rgba(31, 20, 14, .22));
+    }
+
+    .guide-head {
+      position: absolute;
+      left: 23px;
+      top: 4px;
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      color: var(--ivory);
+      background: var(--red);
+      border: 3px solid #fff1d8;
+      font-weight: 900;
+      font-size: 20px;
+      z-index: 3;
+    }
+
+    .guide-hat {
+      position: absolute;
+      left: 18px;
+      top: 0;
+      width: 52px;
+      height: 15px;
+      border-radius: 999px 999px 8px 8px;
+      background: #2f211b;
+      z-index: 4;
+    }
+
+    .guide-body {
+      position: absolute;
+      left: 12px;
+      top: 40px;
+      width: 64px;
+      height: 78px;
+      border-radius: 28px 28px 18px 18px;
+      background:
+        linear-gradient(135deg, rgba(255,255,255,.2), transparent 38%),
+        var(--guide-accent, var(--jade));
+      border: 3px solid rgba(255, 248, 234, .72);
+      overflow: hidden;
+    }
+
+    .guide-body::before {
+      content: "";
+      position: absolute;
+      inset: 12px auto auto 50%;
+      width: 42px;
+      height: 110px;
+      border-left: 2px solid rgba(255,248,234,.42);
+      transform: translateX(-50%) rotate(18deg);
+    }
+
+    .guide-sleeve {
+      position: absolute;
+      top: 58px;
+      width: 23px;
+      height: 45px;
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--guide-accent, var(--jade)) 78%, #201814);
+      border: 2px solid rgba(255, 248, 234, .62);
+    }
+
+    .guide-sleeve.left {
+      left: 4px;
+      transform: rotate(18deg);
+    }
+
+    .guide-sleeve.right {
+      right: 4px;
+      transform: rotate(-18deg);
+    }
+
+    .guide-widget.thinking .guide-figure {
+      animation: guideThink 1.1s ease-in-out infinite;
+    }
+
+    .guide-widget.speaking .guide-head {
+      animation: guideSpeak 720ms ease-in-out infinite;
+    }
+
+    @keyframes guideThink {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-4px); }
+    }
+
+    @keyframes guideSpeak {
+      0%, 100% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(-2px) scale(1.04); }
+    }
+
+    .guide-bubble {
+      pointer-events: auto;
+      padding: 14px 15px;
+      border-radius: 18px;
+      background: rgba(255, 250, 240, .95);
+      border: 1px solid rgba(99, 68, 44, .18);
+      box-shadow: 0 18px 44px rgba(31, 20, 14, .16);
+      backdrop-filter: blur(16px);
+    }
+
+    .guide-bubble strong {
+      display: block;
+      color: var(--red-deep);
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+
+    .guide-bubble p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .guide-status {
+      margin-top: 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--jade);
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .guide-status::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+      box-shadow: 0 0 0 4px color-mix(in srgb, currentColor 18%, transparent);
+    }
+
     .detail-layout {
       min-height: calc(100vh - 68px);
       display: grid;
@@ -880,6 +1041,18 @@
       .gate-panel {
         transform: none;
       }
+      .guide-widget {
+        grid-template-columns: 60px minmax(0, 1fr);
+        width: calc(100vw - 24px);
+        right: 12px;
+        bottom: 12px;
+      }
+      .guide-figure {
+        width: 60px;
+        height: 94px;
+        transform: scale(.72);
+        transform-origin: bottom left;
+      }
     }
   </style>
 </head>
@@ -1000,6 +1173,21 @@
   </div>
 </section>
 
+<div class="guide-widget" id="guideWidget" aria-live="polite">
+  <div class="guide-figure" aria-hidden="true">
+    <div class="guide-hat"></div>
+    <div class="guide-head" id="guideInitial">宫</div>
+    <div class="guide-sleeve left"></div>
+    <div class="guide-body"></div>
+    <div class="guide-sleeve right"></div>
+  </div>
+  <div class="guide-bubble">
+    <strong id="guideName">故宫导览员</strong>
+    <p id="guideLine">进入展馆后，我会随当前文物切换讲解身份。</p>
+    <div class="guide-status" id="guideStatus">待命</div>
+  </div>
+</div>
+
 <script>
   const apiParam = new URLSearchParams(window.location.search).get("api");
   const localHosts = new Set(["localhost", "127.0.0.1"]);
@@ -1023,6 +1211,8 @@
 
   function showScreen(id) {
     screens.forEach((screenId) => $(screenId).classList.toggle("active", screenId === id));
+    const guide = $("guideWidget");
+    if (guide) guide.classList.toggle("active", id !== "gateScreen");
   }
 
   function setBusy(scope, busy, text) {
@@ -1131,6 +1321,38 @@
     return [persona.role, persona.voice].filter(Boolean).join("。");
   }
 
+  function personaAccent(persona) {
+    const name = persona?.name || "";
+    if (name.includes("乾隆")) return "#8e2f28";
+    if (name.includes("瓷") || name.includes("陶")) return "#3d6f66";
+    if (name.includes("钟") || name.includes("通事")) return "#31576e";
+    if (name.includes("礼") || name.includes("起居")) return "#5b4b7a";
+    if (name.includes("匠") || name.includes("雷")) return "#9a6a35";
+    if (name.includes("宝") || name.includes("藏")) return "#b38635";
+    return "#365f54";
+  }
+
+  function clipGuideLine(text, max = 54) {
+    if (!text) return "";
+    const compact = text.replace(/\s+/g, " ").trim();
+    return compact.length > max ? `${compact.slice(0, max)}...` : compact;
+  }
+
+  function updateGuide(persona, options = {}) {
+    const guide = $("guideWidget");
+    if (!guide || !persona) return;
+    const state = options.state || "idle";
+    const score = getRelationshipScore(persona, activeArtifact);
+    const stage = relationshipStage(score);
+    guide.classList.toggle("thinking", state === "thinking");
+    guide.classList.toggle("speaking", state === "speaking");
+    guide.style.setProperty("--guide-accent", personaAccent(persona));
+    $("guideInitial").innerText = persona.name.slice(0, 1);
+    $("guideName").innerText = persona.name;
+    $("guideLine").innerText = clipGuideLine(options.line || persona.voice || "我会围绕当前文物为你讲解。");
+    $("guideStatus").innerText = options.status || `${stage} · 第 ${score} 次交流`;
+  }
+
   function relationshipKey(persona, artifact = activeArtifact) {
     const personaName = persona?.name || "讲解者";
     const artifactId = artifact?.id || "gallery";
@@ -1192,6 +1414,10 @@
     $("galleryPersonaName").innerText = persona.name;
     $("galleryPersonaRole").innerText = personaSummary(persona);
     updateRelationshipView(persona, activeArtifact);
+    updateGuide(persona, {
+      line: `已进入${activeGallery.name}，我会先带你看${activeArtifact.title}。`,
+      status: `${relationshipStage(getRelationshipScore(persona, activeArtifact))} · 等你提问`
+    });
     $("galleryQuestion").value = `请介绍${activeGallery.name}最值得看的文物`;
     $("galleryAiOutput").innerText = "可以在展馆内直接提问，例如：这个展馆最值得先看什么？";
     clearSources("gallery");
@@ -1242,6 +1468,10 @@
     $("galleryPersonaName").innerText = persona.name;
     $("galleryPersonaRole").innerText = personaSummary(persona);
     updateRelationshipView(persona, activeArtifact);
+    updateGuide(persona, {
+      line: `现在讲解${activeArtifact.title}。${persona.voice}`,
+      status: `${relationshipStage(getRelationshipScore(persona, activeArtifact))} · 可提问`
+    });
     $("detailQuestion").value = `这件${activeArtifact.title}为什么重要？`;
     $("detailAiOutput").innerText = "可以问：这件文物为什么重要？它和当时的宫廷生活有什么关系？";
     clearSources("detail");
@@ -1262,6 +1492,11 @@
     const output = scope === "detail" ? $("detailAiOutput") : $("galleryAiOutput");
     const audio = scope === "detail" ? $("detailAudio") : $("galleryAudio");
     setBusy(scope, true, "讲解者正在思索...");
+    updateGuide(persona, {
+      state: "thinking",
+      line: "我正在查阅当前文物线索，整理一段适合讲给你听的回答。",
+      status: "思索中"
+    });
     audio.pause();
     try {
       const res = await fetch(`${API_BASE}/api/palace/chat`, {
@@ -1284,6 +1519,11 @@
       const nextScore = incrementRelationship(persona, activeArtifact);
       updateRelationshipView(persona, activeArtifact);
       output.innerText = data.speech_text;
+      updateGuide(persona, {
+        state: "speaking",
+        line: data.speech_text,
+        status: `${relationshipStage(nextScore)} · 正在讲解`
+      });
       if (data.relationship_stage) {
         output.innerText += `\n\n关系状态：${relationshipStage(nextScore)}，第 ${nextScore} 次交流。`;
       }
@@ -1300,8 +1540,18 @@
         audio.oncanplay = () => {
           setAudioStatus(scope, "音频已就绪", "可以点击播放器播放。");
         };
+        audio.onended = () => {
+          updateGuide(persona, {
+            line: "讲解先到这里。你可以继续追问这件文物的工艺、用途或时代背景。",
+            status: `${relationshipStage(nextScore)} · 待命`
+          });
+        };
         audio.onerror = () => {
           setAudioStatus(scope, "音频加载失败", "请刷新后重试，或先查看文字讲解。");
+          updateGuide(persona, {
+            line: "音频暂时没有顺利加载，文字讲解仍然可以查看。",
+            status: "音频受阻"
+          });
         };
         audio.src = audioUrl + "?t=" + Date.now();
         audio.load();
@@ -1319,6 +1569,10 @@
       }
     } catch (err) {
       output.innerText = err.message;
+      updateGuide(persona, {
+        line: "这次讲解没有顺利生成，可以稍后再问一次，或先查看页面中的文物资料。",
+        status: "生成受阻"
+      });
     } finally {
       setBusy(scope, false);
     }
