@@ -392,6 +392,15 @@ def sanitize_tts_text(text: str) -> str:
     return clean_text or "讲解内容暂时为空。"
 
 
+def strip_dialogue_speakers(text: str, personas: list[dict[str, Any]]) -> str:
+    speaker_names = [re.escape(persona["name"]) for persona in personas if persona.get("name")]
+    if not speaker_names:
+        return text
+    speaker_pattern = re.compile(rf"^\s*(?:{'|'.join(speaker_names)})\s*[：:]\s*")
+    lines = [speaker_pattern.sub("", line).strip() for line in text.splitlines()]
+    return "\n".join(line for line in lines if line)
+
+
 class ChatRequest(BaseModel):
     question: str
     spot_id: str | None = None
@@ -835,7 +844,7 @@ async def palace_scene_chat(payload: PalaceSceneRequest):
         scene_text, personas = build_scene_fallback(bundle)
         warnings.append(f"双人讲解暂时改用本地 RAG 资料生成：{type(exc).__name__}")
     try:
-        audio_url = await synthesize(scene_text)
+        audio_url = await synthesize(strip_dialogue_speakers(scene_text, personas))
     except Exception as exc:
         audio_url = ""
         warnings.append(f"语音合成暂时不可用：{type(exc).__name__}")

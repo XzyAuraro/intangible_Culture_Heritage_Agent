@@ -708,11 +708,44 @@
       transform: translateY(0);
     }
 
+    .guide-widget.dual {
+      width: min(430px, calc(100vw - 28px));
+      grid-template-columns: 156px minmax(0, 1fr);
+    }
+
+    .guide-stage {
+      width: 86px;
+      min-height: 128px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      gap: 0;
+    }
+
+    .guide-widget.dual .guide-stage {
+      width: 156px;
+      justify-content: space-between;
+    }
+
     .guide-figure {
       position: relative;
       width: 86px;
       height: 128px;
       filter: drop-shadow(0 18px 20px rgba(31, 20, 14, .22));
+    }
+
+    .guide-figure.secondary {
+      display: none;
+      --guide-accent: var(--guide-accent-secondary, #31576e);
+    }
+
+    .guide-widget.dual .guide-figure {
+      transform: scale(.86);
+      transform-origin: bottom center;
+    }
+
+    .guide-widget.dual .guide-figure.secondary {
+      display: block;
     }
 
     .guide-head {
@@ -1047,11 +1080,23 @@
         right: 12px;
         bottom: 12px;
       }
+      .guide-widget.dual {
+        grid-template-columns: 108px minmax(0, 1fr);
+      }
+      .guide-stage {
+        width: 60px;
+      }
+      .guide-widget.dual .guide-stage {
+        width: 108px;
+      }
       .guide-figure {
         width: 60px;
         height: 94px;
         transform: scale(.72);
         transform-origin: bottom left;
+      }
+      .guide-widget.dual .guide-figure {
+        transform: scale(.62);
       }
     }
   </style>
@@ -1176,12 +1221,21 @@
 </section>
 
 <div class="guide-widget" id="guideWidget" aria-live="polite">
-  <div class="guide-figure" aria-hidden="true">
-    <div class="guide-hat"></div>
-    <div class="guide-head" id="guideInitial">宫</div>
-    <div class="guide-sleeve left"></div>
-    <div class="guide-body"></div>
-    <div class="guide-sleeve right"></div>
+  <div class="guide-stage" aria-hidden="true">
+    <div class="guide-figure primary">
+      <div class="guide-hat"></div>
+      <div class="guide-head" id="guideInitial">宫</div>
+      <div class="guide-sleeve left"></div>
+      <div class="guide-body"></div>
+      <div class="guide-sleeve right"></div>
+    </div>
+    <div class="guide-figure secondary">
+      <div class="guide-hat"></div>
+      <div class="guide-head" id="guideInitialSecondary">礼</div>
+      <div class="guide-sleeve left"></div>
+      <div class="guide-body"></div>
+      <div class="guide-sleeve right"></div>
+    </div>
   </div>
   <div class="guide-bubble">
     <strong id="guideName">故宫导览员</strong>
@@ -1346,6 +1400,7 @@
     const state = options.state || "idle";
     const score = getRelationshipScore(persona, activeArtifact);
     const stage = relationshipStage(score);
+    guide.classList.remove("dual");
     guide.classList.toggle("thinking", state === "thinking");
     guide.classList.toggle("speaking", state === "speaking");
     guide.style.setProperty("--guide-accent", personaAccent(persona));
@@ -1353,6 +1408,26 @@
     $("guideName").innerText = persona.name;
     $("guideLine").innerText = clipGuideLine(options.line || persona.voice || "我会围绕当前文物为你讲解。");
     $("guideStatus").innerText = options.status || `${stage} · 第 ${score} 次交流`;
+  }
+
+  function updateDualGuide(personas = [], options = {}) {
+    const guide = $("guideWidget");
+    if (!guide || !personas.length) return;
+    const primary = personas[0];
+    const partner = personas[1] || personas[0];
+    const state = options.state || "speaking";
+    const score = getRelationshipScore(primary, activeArtifact);
+    const stage = relationshipStage(score);
+    guide.classList.add("dual");
+    guide.classList.toggle("thinking", state === "thinking");
+    guide.classList.toggle("speaking", state === "speaking");
+    guide.style.setProperty("--guide-accent", personaAccent(primary));
+    guide.style.setProperty("--guide-accent-secondary", personaAccent(partner));
+    $("guideInitial").innerText = primary.name.slice(0, 1);
+    $("guideInitialSecondary").innerText = partner.name.slice(0, 1);
+    $("guideName").innerText = `${primary.name} × ${partner.name}`;
+    $("guideLine").innerText = clipGuideLine(options.line || "两位讲解者正在从不同角度说明这件文物。", 64);
+    $("guideStatus").innerText = options.status || `${stage} · 双人讲解`;
   }
 
   function relationshipKey(persona, artifact = activeArtifact) {
@@ -1642,11 +1717,12 @@
     const questionInput = scope === "detail" ? $("detailQuestion") : $("galleryQuestion");
     const question = questionInput.value || `请围绕${activeArtifact.title}进行双人讲解`;
     const persona = getArtifactPersona(activeArtifact, activeGallery);
+    const previewPartner = scenePartnerPreview(activeGallery, activeArtifact, persona);
     const relationshipScore = getRelationshipScore(persona, activeArtifact);
     const output = scope === "detail" ? $("detailAiOutput") : $("galleryAiOutput");
     const audio = scope === "detail" ? $("detailAudio") : $("galleryAudio");
     setBusy(scope, true, "两位讲解者正在对谈...");
-    updateGuide(persona, {
+    updateDualGuide([persona, previewPartner], {
       state: "thinking",
       line: "我正在邀请另一位讲解者，一起从两个角度说明这件文物。",
       status: "组织双人讲解"
@@ -1678,7 +1754,7 @@
         output.innerText += `\n\n提示：${data.warnings.join("；")}`;
       }
       renderSources(scope, data.contexts || []);
-      updateGuide(persona, {
+      updateDualGuide(data.personas || [persona], {
         state: "speaking",
         line: partner ? `我和${partner.name}正在从两个角度讲解。` : "双人讲解已经生成。",
         status: `${relationshipStage(nextScore)} · 双人讲解`
@@ -1693,14 +1769,14 @@
           setAudioStatus(scope, "音频已就绪", "可以点击播放器播放。");
         };
         audio.onended = () => {
-          updateGuide(persona, {
+          updateDualGuide(data.personas || [persona], {
             line: "双人讲解先到这里。你可以继续追问两位角色提到的制度、工艺或审美线索。",
             status: `${relationshipStage(nextScore)} · 待命`
           });
         };
         audio.onerror = () => {
           setAudioStatus(scope, "音频加载失败", "请刷新后重试，或先查看文字讲解。");
-          updateGuide(persona, {
+          updateDualGuide(data.personas || [persona], {
             line: "双人讲解文字已生成，但音频暂时没有顺利加载。",
             status: "音频受阻"
           });
@@ -1728,6 +1804,31 @@
     } finally {
       setBusy(scope, false);
     }
+  }
+
+  function scenePartnerPreview(gallery, artifact, primary) {
+    const galleryId = gallery?.id || "";
+    const primaryName = primary?.name || "";
+    const partners = {
+      qianlong: { name: "乾隆皇帝", role: "清高宗弘历", voice: "从帝王审美、收藏趣味和宫廷使用解释文物。" },
+      display: { name: "内廷陈设官", role: "清代宫廷家具与陈设管理者", voice: "从陈设制度、空间秩序和使用痕迹解释器物。" },
+      ritual: { name: "内廷礼制官", role: "清代宫廷礼仪与典章记录者", voice: "从礼制、秩序和仪式空间解释宫廷文物。" },
+      kiln: { name: "御窑厂督陶官", role: "清代景德镇御窑督陶官", voice: "从窑口、釉色、烧造与宫廷使用解释陶瓷。" },
+      song: { name: "宋代瓷器鉴赏家", role: "熟悉宋代单色釉审美的文人鉴赏者", voice: "从釉色、器形和含蓄审美讲述宋瓷气韵。" },
+      craftsman: { name: "样式雷匠师", role: "清代宫廷营造世家匠师", voice: "从尺度、结构、图档和施工管理解释宫廷建筑。" },
+      clock: { name: "内廷西洋钟表通事", role: "清宫接触西洋器物的译介者", voice: "从贡品、贸易和技术交流解释西洋钟表入宫。" },
+      treasure: { name: "乾隆朝鉴藏宝臣", role: "清代内廷鉴藏与陈设官", voice: "从材质、礼制、祥瑞寓意和皇家审美解释珍宝。" },
+      recorder: { name: "内廷起居注官", role: "清代宫廷日常记录者", voice: "从政务、起居、召对和内廷秩序解释宫殿空间。" }
+    };
+    let partner = partners.display;
+    if (galleryId === "ceramics") partner = primaryName.includes("宋代瓷器") ? partners.kiln : partners.song;
+    if (galleryId === "furniture") partner = primaryName.includes("乾隆") ? partners.display : partners.qianlong;
+    if (galleryId === "architecture") partner = primaryName.includes("匠") || primaryName.includes("雷") ? partners.ritual : partners.craftsman;
+    if (galleryId === "original_display") partner = primaryName.includes("起居") ? partners.ritual : partners.recorder;
+    if (galleryId === "clocks") partner = primaryName.includes("钟表匠") ? partners.clock : partners.kiln;
+    if (galleryId === "treasures") partner = primaryName.includes("鉴藏") || primaryName.includes("宝臣") ? partners.ritual : partners.treasure;
+    if (partner.name === primaryName) partner = artifact?.id === "red_lacquer_table" ? partners.qianlong : partners.display;
+    return partner;
   }
 
   function startVoice(scope) {
