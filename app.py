@@ -408,6 +408,13 @@ class PalaceChatRequest(BaseModel):
     relationship_score: int = 1
 
 
+class PalaceSceneRequest(BaseModel):
+    question: str = "请两位讲解者围绕当前文物进行一段双人讲解。"
+    gallery_id: str | None = None
+    artifact_id: str | None = None
+    relationship_score: int = 1
+
+
 @app.get("/api/health")
 async def health():
     return {"status": "ok", "has_api_key": bool(API_KEY)}
@@ -465,6 +472,239 @@ def describe_relationship(score: int) -> str:
     if score >= 4:
         return "多次交流：语气比初见更熟络，可略微主动补充相关话题，但仍要围绕文物证据。"
     return "初次见面：语气保持礼貌、清楚、克制，先建立基本理解。"
+
+
+def scene_partner_persona(gallery: dict[str, Any], artifact: dict[str, Any], primary: dict[str, Any]) -> dict[str, str]:
+    gallery_id = gallery["id"]
+    artifact_id = artifact["id"]
+    primary_name = primary["name"]
+    partners: dict[str, dict[str, str]] = {
+        "qianlong": {
+            "name": "乾隆皇帝",
+            "role": "清高宗弘历",
+            "voice": "从帝王审美、收藏趣味和宫廷使用解释文物。",
+        },
+        "display_officer": {
+            "name": "内廷陈设官",
+            "role": "清代宫廷家具与陈设管理者",
+            "voice": "从陈设制度、空间秩序和使用痕迹解释器物。",
+        },
+        "ritual_officer": {
+            "name": "内廷礼制官",
+            "role": "清代宫廷礼仪与典章记录者",
+            "voice": "从礼制、秩序和仪式空间解释宫廷文物。",
+        },
+        "kiln_officer": {
+            "name": "御窑厂督陶官",
+            "role": "清代景德镇御窑督陶官",
+            "voice": "从窑口、釉色、烧造与宫廷使用解释陶瓷。",
+        },
+        "song_connoisseur": {
+            "name": "宋代瓷器鉴赏家",
+            "role": "熟悉宋代单色釉审美的文人鉴赏者",
+            "voice": "从釉色、器形和含蓄审美讲述宋瓷气韵。",
+        },
+        "craftsman": {
+            "name": "样式雷匠师",
+            "role": "清代宫廷营造世家匠师",
+            "voice": "从尺度、结构、图档和施工管理解释宫廷建筑。",
+        },
+        "clock_interpreter": {
+            "name": "内廷西洋钟表通事",
+            "role": "清宫接触西洋器物的译介者",
+            "voice": "从贡品、贸易和技术交流解释西洋钟表入宫。",
+        },
+        "treasure_curator": {
+            "name": "乾隆朝鉴藏宝臣",
+            "role": "清代内廷鉴藏与陈设官",
+            "voice": "从材质、礼制、祥瑞寓意和皇家审美解释珍宝。",
+        },
+        "daily_recorder": {
+            "name": "内廷起居注官",
+            "role": "清代宫廷日常记录者",
+            "voice": "从政务、起居、召对和内廷秩序解释宫殿空间。",
+        },
+    }
+    if gallery_id == "ceramics":
+        choice = "kiln_officer" if "宋代瓷器" in primary_name else "song_connoisseur"
+    elif gallery_id == "furniture":
+        choice = "display_officer" if "乾隆" in primary_name else "qianlong"
+    elif gallery_id == "architecture":
+        choice = "ritual_officer" if "样式雷" in primary_name or "匠" in primary_name else "craftsman"
+    elif gallery_id == "original_display":
+        choice = "ritual_officer" if "起居" in primary_name else "daily_recorder"
+    elif gallery_id == "clocks":
+        choice = "clock_interpreter" if "钟表匠" in primary_name else "kiln_officer"
+    elif gallery_id == "treasures":
+        choice = "ritual_officer" if "鉴藏" in primary_name or "宝臣" in primary_name else "treasure_curator"
+    else:
+        choice = "display_officer"
+    partner = partners[choice]
+    if partner["name"] == primary_name:
+        partner = partners["display_officer"] if artifact_id != "red_lacquer_table" else partners["qianlong"]
+    return partner
+
+
+def build_scene_prompt(
+    question: str,
+    bundle: dict[str, Any],
+    relationship_score: int = 1,
+) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
+    gallery = bundle["gallery"]
+    artifact = bundle["artifact"]
+    primary = get_artifact_persona(gallery, artifact)
+    partner = scene_partner_persona(gallery, artifact, primary)
+    personas = [primary, partner]
+    retrieved_text = "\n\n".join(
+        "\n".join(
+            [
+                f"【资料{i}】{item['title']}",
+                f"【类型】{item['type']}",
+                f"【来源】{item['source']}",
+                f"【内容】{item['evidence']}",
+            ]
+        )
+        for i, item in enumerate(bundle["contexts"], start=1)
+    )
+    context_text = "\n".join(
+        [
+            f"【展馆】{gallery['name']}，位置：{gallery['zone']}",
+            f"【展馆介绍】{gallery['summary']}",
+            f"【当前文物】{artifact['title']}，时代：{artifact['period']}",
+            f"【文物说明】{artifact['description']}",
+            f"【视觉线索】{artifact['image_hint']}",
+            f"【来源】{artifact['source']}",
+            f"【角色甲】{primary['name']}，身份：{primary['role']}，表达特点：{primary['voice']}",
+            f"【角色乙】{partner['name']}，身份：{partner['role']}，表达特点：{partner['voice']}",
+            f"【观众关系】第{max(1, relationship_score)}次交流，{describe_relationship(relationship_score)}",
+        ]
+    )
+    system = f"""你是故宫虚拟展馆的“场景导演”。
+你要协调两个历史讲解角色进行一段短对话：
+角色甲：{primary['name']}（{primary['role']}）
+角色乙：{partner['name']}（{partner['role']}）
+
+要求：
+1. 必须围绕当前展馆、当前文物和检索资料，不得编造馆藏编号、尺寸、年代断语、出处或资料中没有的具体历史事件。
+2. 输出 4 句以内，每句单独一行，格式必须是“{primary['name']}：……”或“{partner['name']}：……”。
+3. 两个角色要有互补视角：一位讲文物自身，一位补充制度、工艺、审美或空间背景。
+4. 可以有轻微观点张力，但不要争吵、不要写舞台动作、不要使用括号旁白。
+5. 语言适合语音讲解，总长度控制在 45-75 秒。
+6. 不要说“根据资料库”“作为 AI”。"""
+    user = f"观众问题：{question}\n\n当前上下文：\n{context_text}\n\n检索资料：\n{retrieved_text}"
+    return [{"role": "system", "content": system}, {"role": "user", "content": user}], personas
+
+
+def build_role_agent_prompt(
+    question: str,
+    bundle: dict[str, Any],
+    persona: dict[str, Any],
+    relationship_score: int = 1,
+) -> list[dict[str, str]]:
+    gallery = bundle["gallery"]
+    artifact = bundle["artifact"]
+    evidence = "\n".join(f"- {item['title']}：{item['evidence']}" for item in bundle["contexts"][:4])
+    system = f"""你是一个独立历史角色 agent：{persona['name']}。
+身份：{persona['role']}
+表达特点：{persona['voice']}
+
+任务：只从你的角色视角，为稍后的双人讲解提供观点素材。
+要求：
+1. 必须基于文物说明和资料线索，不得编造资料中没有的事实。
+2. 只输出 2 条要点，每条不超过 45 个汉字。
+3. 不要直接写成最终对话，不要提“AI”或“资料库”。
+4. 观众关系：第{max(1, relationship_score)}次交流，{describe_relationship(relationship_score)}"""
+    user = "\n".join(
+        [
+            f"观众问题：{question}",
+            f"展馆：{gallery['name']}",
+            f"文物：{artifact['title']}，时代：{artifact['period']}",
+            f"文物说明：{artifact['description']}",
+            f"资料线索：\n{evidence}",
+        ]
+    )
+    return [{"role": "system", "content": system}, {"role": "user", "content": user}]
+
+
+def build_scene_director_prompt(
+    question: str,
+    bundle: dict[str, Any],
+    personas: list[dict[str, Any]],
+    role_notes: list[str],
+    relationship_score: int = 1,
+) -> list[dict[str, str]]:
+    gallery = bundle["gallery"]
+    artifact = bundle["artifact"]
+    primary, partner = personas
+    notes_text = "\n\n".join(
+        f"【{persona['name']}的独立观点】\n{note}"
+        for persona, note in zip(personas, role_notes)
+    )
+    evidence = "\n".join(f"- {item['title']}：{item['evidence']}" for item in bundle["contexts"][:4])
+    system = f"""你是故宫虚拟展馆的场景导演 agent。
+你已经收到两个独立角色 agent 的观点，现在要把它们编排成一段双人讲解。
+
+角色：
+1. {primary['name']}（{primary['role']}）
+2. {partner['name']}（{partner['role']}）
+
+要求：
+1. 输出 4 句以内，每句单独一行，格式必须是“{primary['name']}：……”或“{partner['name']}：……”。
+2. 两位角色要观点互补，不要互相重复；可以轻微接话，但不要争吵。
+3. 必须受当前文物、资料线索和两个角色独立观点约束，不得新增资料中没有的具体事实。
+4. 不写舞台动作、括号旁白；适合 45-75 秒语音讲解。
+5. 观众关系：第{max(1, relationship_score)}次交流，{describe_relationship(relationship_score)}
+6. 不要说“根据资料库”“作为 AI”。"""
+    user = "\n".join(
+        [
+            f"观众问题：{question}",
+            f"展馆：{gallery['name']}",
+            f"文物：{artifact['title']}，时代：{artifact['period']}",
+            f"文物说明：{artifact['description']}",
+            f"资料线索：\n{evidence}",
+            notes_text,
+        ]
+    )
+    return [{"role": "system", "content": system}, {"role": "user", "content": user}]
+
+
+def build_scene_fallback(bundle: dict[str, Any]) -> tuple[str, list[dict[str, str]]]:
+    gallery = bundle["gallery"]
+    artifact = bundle["artifact"]
+    primary = get_artifact_persona(gallery, artifact)
+    partner = scene_partner_persona(gallery, artifact, primary)
+    evidence_items = [item["evidence"] for item in bundle["contexts"][:2]]
+    evidence = " ".join(evidence_items) if evidence_items else artifact["description"]
+    scene_text = "\n".join(
+        [
+            f"{primary['name']}：请看《{artifact['title']}》。{artifact['description']}",
+            f"{partner['name']}：若从{gallery['name']}的脉络看，它还关系到{gallery['summary']}",
+            f"{primary['name']}：可参考的资料线索是：{evidence}",
+            f"{partner['name']}：所以这件文物不只可看其形，也要连同工艺、制度与空间一并理解。",
+        ]
+    )
+    return scene_text, [primary, partner]
+
+
+def call_scene_llm(question: str, bundle: dict[str, Any], relationship_score: int = 1) -> tuple[str, list[dict[str, str]]]:
+    if not API_KEY:
+        return build_scene_fallback(bundle)
+    _messages, personas = build_scene_prompt(question, bundle, relationship_score)
+    role_notes = []
+    for persona in personas:
+        role_completion = client.chat.completions.create(
+            model=os.getenv("DASHSCOPE_MODEL", "qwen-plus"),
+            messages=build_role_agent_prompt(question, bundle, persona, relationship_score),
+            temperature=0.25,
+        )
+        role_notes.append(role_completion.choices[0].message.content.strip())
+    messages = build_scene_director_prompt(question, bundle, personas, role_notes, relationship_score)
+    completion = client.chat.completions.create(
+        model=os.getenv("DASHSCOPE_MODEL", "qwen-plus"),
+        messages=messages,
+        temperature=0.35,
+    )
+    return completion.choices[0].message.content.strip(), personas
 
 
 def build_palace_prompt(
@@ -577,6 +817,42 @@ async def palace_chat(payload: PalaceChatRequest):
         "speech_text": speech_text,
         "plain_text": artifact["description"],
         "source": artifact["source"],
+        "contexts": bundle["contexts"],
+        "audio_url": audio_url,
+    }
+
+
+@app.post("/api/palace/scene-chat")
+async def palace_scene_chat(payload: PalaceSceneRequest):
+    bundle = retrieve_palace(payload.question, payload.gallery_id, payload.artifact_id)
+    gallery = bundle["gallery"]
+    artifact = bundle["artifact"]
+    warnings = []
+    relationship_score = max(1, min(payload.relationship_score, 50))
+    try:
+        scene_text, personas = call_scene_llm(payload.question, bundle, relationship_score)
+    except Exception as exc:
+        scene_text, personas = build_scene_fallback(bundle)
+        warnings.append(f"双人讲解暂时改用本地 RAG 资料生成：{type(exc).__name__}")
+    try:
+        audio_url = await synthesize(scene_text)
+    except Exception as exc:
+        audio_url = ""
+        warnings.append(f"语音合成暂时不可用：{type(exc).__name__}")
+    return {
+        "status": "success",
+        "degraded": bool(warnings),
+        "warnings": warnings,
+        "user_text": payload.question,
+        "gallery_id": gallery["id"],
+        "gallery_name": gallery["name"],
+        "artifact_id": artifact["id"],
+        "artifact_title": artifact["title"],
+        "personas": personas,
+        "relationship_score": relationship_score,
+        "relationship_stage": describe_relationship(relationship_score),
+        "scene_text": scene_text,
+        "speech_text": scene_text,
         "contexts": bundle["contexts"],
         "audio_url": audio_url,
     }

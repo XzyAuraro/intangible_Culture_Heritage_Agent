@@ -1123,6 +1123,7 @@
         <input id="galleryQuestion" placeholder="向本馆讲解者提问">
         <div class="ai-buttons">
           <button type="button" class="primary-btn" id="galleryAskBtn">提问</button>
+          <button type="button" class="ghost-btn" id="gallerySceneBtn">双人讲解</button>
           <button type="button" class="ghost-btn" id="galleryVoiceBtn">语音</button>
         </div>
         <div class="voice-status" id="galleryVoiceStatus" aria-live="polite"></div>
@@ -1164,6 +1165,7 @@
           <div class="ai-buttons">
             <button type="button" class="primary-btn" id="detailIntroBtn">讲解文物</button>
             <button type="button" class="primary-btn" id="detailAskBtn">提问</button>
+            <button type="button" class="ghost-btn" id="detailSceneBtn">双人讲解</button>
             <button type="button" class="ghost-btn" id="detailVoiceBtn">语音</button>
           </div>
           <div class="voice-status" id="detailVoiceStatus" aria-live="polite"></div>
@@ -1218,7 +1220,7 @@
   function setBusy(scope, busy, text) {
     const output = scope === "detail" ? $("detailAiOutput") : $("galleryAiOutput");
     if (text) output.innerText = text;
-    ["galleryAskBtn", "galleryIntroBtn", "detailAskBtn", "detailIntroBtn"].forEach((id) => {
+    ["galleryAskBtn", "galleryIntroBtn", "gallerySceneBtn", "detailAskBtn", "detailIntroBtn", "detailSceneBtn"].forEach((id) => {
       const el = $(id);
       if (el) el.disabled = busy;
     });
@@ -1634,6 +1636,100 @@
     };
   }
 
+  async function sceneTalk(scope) {
+    if (!activeGallery) return;
+    if (!activeArtifact) activeArtifact = activeGallery.artifacts[0];
+    const questionInput = scope === "detail" ? $("detailQuestion") : $("galleryQuestion");
+    const question = questionInput.value || `请围绕${activeArtifact.title}进行双人讲解`;
+    const persona = getArtifactPersona(activeArtifact, activeGallery);
+    const relationshipScore = getRelationshipScore(persona, activeArtifact);
+    const output = scope === "detail" ? $("detailAiOutput") : $("galleryAiOutput");
+    const audio = scope === "detail" ? $("detailAudio") : $("galleryAudio");
+    setBusy(scope, true, "两位讲解者正在对谈...");
+    updateGuide(persona, {
+      state: "thinking",
+      line: "我正在邀请另一位讲解者，一起从两个角度说明这件文物。",
+      status: "组织双人讲解"
+    });
+    audio.pause();
+    try {
+      const res = await fetch(`${API_BASE}/api/palace/scene-chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          question,
+          gallery_id: activeGallery.id,
+          artifact_id: activeArtifact.id,
+          relationship_score: relationshipScore
+        })
+      });
+      if (!res.ok) {
+        const message = await res.text();
+        throw new Error(message || `请求失败：${res.status}`);
+      }
+      const data = await res.json();
+      if (data.status !== "success") throw new Error(data.message || "生成失败");
+      const nextScore = incrementRelationship(persona, activeArtifact);
+      updateRelationshipView(persona, activeArtifact);
+      const partner = data.personas?.[1];
+      output.innerText = data.scene_text;
+      output.innerText += `\n\n关系状态：${relationshipStage(nextScore)}，第 ${nextScore} 次交流。`;
+      if (data.warnings && data.warnings.length) {
+        output.innerText += `\n\n提示：${data.warnings.join("；")}`;
+      }
+      renderSources(scope, data.contexts || []);
+      updateGuide(persona, {
+        state: "speaking",
+        line: partner ? `我和${partner.name}正在从两个角度讲解。` : "双人讲解已经生成。",
+        status: `${relationshipStage(nextScore)} · 双人讲解`
+      });
+      if (data.audio_url) {
+        setAudioStatus(scope, "正在加载双人讲解音频", "生成完成，正在准备播放器。");
+        const audioUrl = new URL(data.audio_url, API_BASE).href;
+        audio.onloadedmetadata = () => {
+          setAudioStatus(scope, "音频已就绪", "可以点击播放器播放。");
+        };
+        audio.oncanplay = () => {
+          setAudioStatus(scope, "音频已就绪", "可以点击播放器播放。");
+        };
+        audio.onended = () => {
+          updateGuide(persona, {
+            line: "双人讲解先到这里。你可以继续追问两位角色提到的制度、工艺或审美线索。",
+            status: `${relationshipStage(nextScore)} · 待命`
+          });
+        };
+        audio.onerror = () => {
+          setAudioStatus(scope, "音频加载失败", "请刷新后重试，或先查看文字讲解。");
+          updateGuide(persona, {
+            line: "双人讲解文字已生成，但音频暂时没有顺利加载。",
+            status: "音频受阻"
+          });
+        };
+        audio.src = audioUrl + "?t=" + Date.now();
+        audio.load();
+        setTimeout(() => {
+          audio.play().then(() => {
+            setAudioStatus(scope, "正在播放", "可以用播放器暂停或调整进度。");
+          }).catch(() => {
+            setAudioStatus(scope, "音频已生成", "浏览器拦截自动播放，请点击播放器播放。");
+          });
+        }, 100);
+      } else {
+        audio.removeAttribute("src");
+        audio.load();
+        setAudioStatus(scope, "语音暂不可用", "可以先查看文字讲解。");
+      }
+    } catch (err) {
+      output.innerText = err.message;
+      updateGuide(persona, {
+        line: "双人讲解没有顺利生成，可以稍后再试，或先使用单人提问。",
+        status: "生成受阻"
+      });
+    } finally {
+      setBusy(scope, false);
+    }
+  }
+
   function startVoice(scope) {
     activeVoiceTarget = scope;
     transcript = "";
@@ -1674,6 +1770,10 @@
     event.preventDefault();
     ask("gallery", "chat");
   };
+  $("gallerySceneBtn").onclick = (event) => {
+    event.preventDefault();
+    sceneTalk("gallery");
+  };
   $("detailIntroBtn").onclick = (event) => {
     event.preventDefault();
     ask("detail", "intro");
@@ -1681,6 +1781,10 @@
   $("detailAskBtn").onclick = (event) => {
     event.preventDefault();
     ask("detail", "chat");
+  };
+  $("detailSceneBtn").onclick = (event) => {
+    event.preventDefault();
+    sceneTalk("detail");
   };
   $("galleryQuestion").onkeydown = (event) => {
     if (event.key === "Enter") {
