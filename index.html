@@ -550,6 +550,24 @@
       font-size: 14px;
     }
 
+    .relationship-meter {
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: rgba(54, 95, 84, .08);
+      border: 1px solid rgba(54, 95, 84, .16);
+      color: var(--jade);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .relationship-meter strong {
+      display: block;
+      margin-bottom: 2px;
+      color: var(--red-deep);
+      font-size: 13px;
+    }
+
     .ai-output {
       min-height: 190px;
       max-height: min(34vh, 330px);
@@ -922,6 +940,7 @@
         <div class="avatar" id="galleryAvatar">宫</div>
         <strong id="galleryPersonaName">讲解者</strong>
         <p id="galleryPersonaRole">进入展馆后出现对应历史人物。</p>
+        <div class="relationship-meter" id="galleryRelationship">初次见面</div>
       </div>
       <div class="ai-output" id="galleryAiOutput">可以在展馆内直接提问，例如：这个展馆最值得先看什么？</div>
       <audio id="galleryAudio" controls></audio>
@@ -962,6 +981,7 @@
       <div class="source-list" id="detailSource">出处</div>
       <div class="detail-ai">
         <h3 id="detailPersona">向讲解者提问</h3>
+        <div class="relationship-meter" id="detailRelationship">初次见面</div>
         <div class="ai-output" id="detailAiOutput">可以问：这件文物为什么重要？它和当时的宫廷生活有什么关系？</div>
         <audio id="detailAudio" controls></audio>
         <div class="audio-status" id="detailAudioStatus" aria-live="polite"></div>
@@ -994,6 +1014,7 @@
   let recognition = null;
   let transcript = "";
   let artifactOrder = [];
+  let relationshipState = {};
 
   const $ = (id) => document.getElementById(id);
   const screens = ["gateScreen", "mapScreen", "galleryScreen", "detailScreen"];
@@ -1110,6 +1131,55 @@
     return [persona.role, persona.voice].filter(Boolean).join("。");
   }
 
+  function relationshipKey(persona, artifact = activeArtifact) {
+    const personaName = persona?.name || "讲解者";
+    const artifactId = artifact?.id || "gallery";
+    return `${personaName}::${artifactId}`;
+  }
+
+  function relationshipStage(score) {
+    if (score >= 10) return "熟识观众";
+    if (score >= 4) return "多次交流";
+    return "初次见面";
+  }
+
+  function loadRelationshipState() {
+    try {
+      relationshipState = JSON.parse(localStorage.getItem("palaceAgentRelationship") || "{}");
+    } catch (err) {
+      relationshipState = {};
+    }
+  }
+
+  function saveRelationshipState() {
+    try {
+      localStorage.setItem("palaceAgentRelationship", JSON.stringify(relationshipState));
+    } catch (err) {
+      relationshipState = {};
+    }
+  }
+
+  function getRelationshipScore(persona, artifact = activeArtifact) {
+    return relationshipState[relationshipKey(persona, artifact)] || 1;
+  }
+
+  function incrementRelationship(persona, artifact = activeArtifact) {
+    const key = relationshipKey(persona, artifact);
+    relationshipState[key] = Math.min((relationshipState[key] || 1) + 1, 50);
+    saveRelationshipState();
+    return relationshipState[key];
+  }
+
+  function updateRelationshipView(persona, artifact = activeArtifact) {
+    const score = getRelationshipScore(persona, artifact);
+    const stage = relationshipStage(score);
+    const text = `<strong>${stage}</strong><span>第 ${score} 次交流，角色会据此调整亲疏语气。</span>`;
+    ["galleryRelationship", "detailRelationship"].forEach((id) => {
+      const element = $(id);
+      if (element) element.innerHTML = text;
+    });
+  }
+
   function openGallery(galleryId) {
     activeGallery = galleries.find((gallery) => gallery.id === galleryId) || galleries[0];
     activeArtifact = activeGallery.artifacts[0];
@@ -1121,6 +1191,7 @@
     $("galleryAvatar").innerText = persona.name.slice(0, 1);
     $("galleryPersonaName").innerText = persona.name;
     $("galleryPersonaRole").innerText = personaSummary(persona);
+    updateRelationshipView(persona, activeArtifact);
     $("galleryQuestion").value = `请介绍${activeGallery.name}最值得看的文物`;
     $("galleryAiOutput").innerText = "可以在展馆内直接提问，例如：这个展馆最值得先看什么？";
     clearSources("gallery");
@@ -1167,6 +1238,10 @@
     detailVisual.setAttribute("role", "img");
     $("detailSource").innerText = `出处：${activeArtifact.source}`;
     $("detailPersona").innerText = `向${persona.name}提问`;
+    $("galleryAvatar").innerText = persona.name.slice(0, 1);
+    $("galleryPersonaName").innerText = persona.name;
+    $("galleryPersonaRole").innerText = personaSummary(persona);
+    updateRelationshipView(persona, activeArtifact);
     $("detailQuestion").value = `这件${activeArtifact.title}为什么重要？`;
     $("detailAiOutput").innerText = "可以问：这件文物为什么重要？它和当时的宫廷生活有什么关系？";
     clearSources("detail");
@@ -1182,6 +1257,8 @@
     const question = mode === "intro"
       ? `请讲解${activeArtifact.title}`
       : questionInput.value;
+    const persona = getArtifactPersona(activeArtifact, activeGallery);
+    const relationshipScore = getRelationshipScore(persona, activeArtifact);
     const output = scope === "detail" ? $("detailAiOutput") : $("galleryAiOutput");
     const audio = scope === "detail" ? $("detailAudio") : $("galleryAudio");
     setBusy(scope, true, "讲解者正在思索...");
@@ -1194,7 +1271,8 @@
           question,
           gallery_id: activeGallery.id,
           artifact_id: activeArtifact.id,
-          mode
+          mode,
+          relationship_score: relationshipScore
         })
       });
       if (!res.ok) {
@@ -1203,7 +1281,12 @@
       }
       const data = await res.json();
       if (data.status !== "success") throw new Error(data.message || "生成失败");
+      const nextScore = incrementRelationship(persona, activeArtifact);
+      updateRelationshipView(persona, activeArtifact);
       output.innerText = data.speech_text;
+      if (data.relationship_stage) {
+        output.innerText += `\n\n关系状态：${relationshipStage(nextScore)}，第 ${nextScore} 次交流。`;
+      }
       if (data.warnings && data.warnings.length) {
         output.innerText += `\n\n提示：${data.warnings.join("；")}`;
       }
@@ -1366,6 +1449,7 @@
     startVoice("detail");
   };
 
+  loadRelationshipState();
   setupVoice();
   loadPalace().catch(() => {
     $("mapOpening").innerText = "无法连接后端，请确认 app.py 已启动。";

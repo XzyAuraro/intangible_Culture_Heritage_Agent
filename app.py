@@ -405,6 +405,7 @@ class PalaceChatRequest(BaseModel):
     gallery_id: str | None = None
     artifact_id: str | None = None
     mode: str = "chat"
+    relationship_score: int = 1
 
 
 @app.get("/api/health")
@@ -458,7 +459,20 @@ async def palace_search(q: str, gallery_id: str | None = None, artifact_id: str 
     }
 
 
-def build_palace_prompt(question: str, bundle: dict[str, Any], mode: str) -> list[dict[str, str]]:
+def describe_relationship(score: int) -> str:
+    if score >= 10:
+        return "熟识观众：语气可以更从容亲近，可简短承接“你常来问此物”的感觉，但仍不得虚构私人往事。"
+    if score >= 4:
+        return "多次交流：语气比初见更熟络，可略微主动补充相关话题，但仍要围绕文物证据。"
+    return "初次见面：语气保持礼貌、清楚、克制，先建立基本理解。"
+
+
+def build_palace_prompt(
+    question: str,
+    bundle: dict[str, Any],
+    mode: str,
+    relationship_score: int = 1,
+) -> list[dict[str, str]]:
     gallery = bundle["gallery"]
     artifact = bundle["artifact"]
     persona = get_artifact_persona(gallery, artifact)
@@ -484,7 +498,9 @@ def build_palace_prompt(question: str, bundle: dict[str, Any], mode: str) -> lis
             f"【来源】{artifact['source']}",
             f"【讲解人物】{persona['name']}，身份：{persona['role']}，表达特点：{persona['voice']}",
             f"【文物触发原因】{persona.get('trigger_reason', '')}",
+            f"【建议语气】{persona.get('trigger_tone', '')}",
             f"【专属话题】{'、'.join(persona.get('trigger_topics', []))}",
+            f"【观众关系】第{max(1, relationship_score)}次交流，{describe_relationship(relationship_score)}",
         ]
     )
     system = f"""你是故宫虚拟展馆的导览讲解员，当前讲解角度参考“{persona['name']}”（身份：{persona['role']}）。
@@ -496,7 +512,8 @@ def build_palace_prompt(question: str, bundle: dict[str, Any], mode: str) -> lis
 5. 语言要有沉浸感，但保持清楚易懂，适合 30-60 秒语音播放。
 6. 若问题超出当前文物，可先简短回应，再引回当前展馆或相关历史语境。
 7. 优先使用“检索资料”中的证据；资料不足时说“这里还不能断定”，不要硬编。
-8. 不要说“根据资料库”“作为 AI”。"""
+8. 结合“观众关系”调整亲疏程度：初见礼貌克制，多次交流可以更自然熟络，十次以上可像熟客一样多给一点引导。
+9. 不要说“根据资料库”“作为 AI”。"""
     if mode == "intro":
         user = f"请为观众生成当前文物的入馆讲解。\n\n当前上下文：\n{context_text}\n\n检索资料：\n{retrieved_text}"
     else:
@@ -504,13 +521,13 @@ def build_palace_prompt(question: str, bundle: dict[str, Any], mode: str) -> lis
     return [{"role": "system", "content": system}, {"role": "user", "content": user}]
 
 
-def call_palace_llm(question: str, bundle: dict[str, Any], mode: str) -> str:
+def call_palace_llm(question: str, bundle: dict[str, Any], mode: str, relationship_score: int = 1) -> str:
     if not API_KEY:
         return build_palace_fallback(bundle)
     completion = client.chat.completions.create(
         model=os.getenv("DASHSCOPE_MODEL", "qwen-plus"),
-        messages=build_palace_prompt(question, bundle, mode),
-        temperature=0,
+        messages=build_palace_prompt(question, bundle, mode, relationship_score),
+        temperature=0.25,
     )
     return completion.choices[0].message.content.strip()
 
@@ -534,8 +551,9 @@ async def palace_chat(payload: PalaceChatRequest):
     gallery = bundle["gallery"]
     artifact = bundle["artifact"]
     warnings = []
+    relationship_score = max(1, min(payload.relationship_score, 50))
     try:
-        speech_text = call_palace_llm(payload.question, bundle, payload.mode)
+        speech_text = call_palace_llm(payload.question, bundle, payload.mode, relationship_score)
     except Exception as exc:
         speech_text = build_palace_fallback(bundle)
         warnings.append(f"模型生成暂时不可用，已改用本地 RAG 资料回答：{type(exc).__name__}")
@@ -554,6 +572,8 @@ async def palace_chat(payload: PalaceChatRequest):
         "artifact_id": artifact["id"],
         "artifact_title": artifact["title"],
         "persona": get_artifact_persona(gallery, artifact),
+        "relationship_score": relationship_score,
+        "relationship_stage": describe_relationship(relationship_score),
         "speech_text": speech_text,
         "plain_text": artifact["description"],
         "source": artifact["source"],
