@@ -523,6 +523,11 @@ def scene_partner_persona(gallery: dict[str, Any], artifact: dict[str, Any], pri
             "role": "清宫接触西洋器物的译介者",
             "voice": "从贡品、贸易和技术交流解释西洋钟表入宫。",
         },
+        "clockmaker": {
+            "name": "造办处钟表匠",
+            "role": "清代内廷造办处做钟处匠师",
+            "voice": "从机械联动、报时娱乐和宫廷制造解释钟表。",
+        },
         "treasure_curator": {
             "name": "乾隆朝鉴藏宝臣",
             "role": "清代内廷鉴藏与陈设官",
@@ -535,17 +540,17 @@ def scene_partner_persona(gallery: dict[str, Any], artifact: dict[str, Any], pri
         },
     }
     if gallery_id == "ceramics":
-        choice = "kiln_officer" if "宋代瓷器" in primary_name else "song_connoisseur"
+        choice = "kiln_officer" if primary_name != "御窑厂督陶官" else "song_connoisseur"
     elif gallery_id == "furniture":
-        choice = "display_officer" if "乾隆" in primary_name else "qianlong"
+        choice = "display_officer" if primary_name != "内廷陈设官" else "qianlong"
     elif gallery_id == "architecture":
-        choice = "ritual_officer" if "样式雷" in primary_name or "匠" in primary_name else "craftsman"
+        choice = "craftsman" if primary_name != "样式雷匠师" else "ritual_officer"
     elif gallery_id == "original_display":
-        choice = "ritual_officer" if "起居" in primary_name else "daily_recorder"
+        choice = "ritual_officer" if artifact_id == "taihe_hall" else "daily_recorder"
     elif gallery_id == "clocks":
-        choice = "clock_interpreter" if "钟表匠" in primary_name else "kiln_officer"
+        choice = "clockmaker" if "皇帝" in primary_name or "乾隆" in primary_name else "clock_interpreter"
     elif gallery_id == "treasures":
-        choice = "ritual_officer" if "鉴藏" in primary_name or "宝臣" in primary_name else "treasure_curator"
+        choice = "treasure_curator" if primary_name != "乾隆朝鉴藏宝臣" else "ritual_officer"
     else:
         choice = "display_officer"
     partner = partners[choice]

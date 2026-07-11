@@ -1817,16 +1817,17 @@
       song: { name: "宋代瓷器鉴赏家", role: "熟悉宋代单色釉审美的文人鉴赏者", voice: "从釉色、器形和含蓄审美讲述宋瓷气韵。" },
       craftsman: { name: "样式雷匠师", role: "清代宫廷营造世家匠师", voice: "从尺度、结构、图档和施工管理解释宫廷建筑。" },
       clock: { name: "内廷西洋钟表通事", role: "清宫接触西洋器物的译介者", voice: "从贡品、贸易和技术交流解释西洋钟表入宫。" },
+      clockmaker: { name: "造办处钟表匠", role: "清代内廷造办处做钟处匠师", voice: "从机械联动、报时娱乐和宫廷制造解释钟表。" },
       treasure: { name: "乾隆朝鉴藏宝臣", role: "清代内廷鉴藏与陈设官", voice: "从材质、礼制、祥瑞寓意和皇家审美解释珍宝。" },
       recorder: { name: "内廷起居注官", role: "清代宫廷日常记录者", voice: "从政务、起居、召对和内廷秩序解释宫殿空间。" }
     };
     let partner = partners.display;
-    if (galleryId === "ceramics") partner = primaryName.includes("宋代瓷器") ? partners.kiln : partners.song;
-    if (galleryId === "furniture") partner = primaryName.includes("乾隆") ? partners.display : partners.qianlong;
-    if (galleryId === "architecture") partner = primaryName.includes("匠") || primaryName.includes("雷") ? partners.ritual : partners.craftsman;
-    if (galleryId === "original_display") partner = primaryName.includes("起居") ? partners.ritual : partners.recorder;
-    if (galleryId === "clocks") partner = primaryName.includes("钟表匠") ? partners.clock : partners.kiln;
-    if (galleryId === "treasures") partner = primaryName.includes("鉴藏") || primaryName.includes("宝臣") ? partners.ritual : partners.treasure;
+    if (galleryId === "ceramics") partner = primaryName === "御窑厂督陶官" ? partners.song : partners.kiln;
+    if (galleryId === "furniture") partner = primaryName === "内廷陈设官" ? partners.qianlong : partners.display;
+    if (galleryId === "architecture") partner = primaryName === "样式雷匠师" ? partners.ritual : partners.craftsman;
+    if (galleryId === "original_display") partner = artifact?.id === "taihe_hall" ? partners.ritual : partners.recorder;
+    if (galleryId === "clocks") partner = primaryName.includes("皇帝") || primaryName.includes("乾隆") ? partners.clockmaker : partners.clock;
+    if (galleryId === "treasures") partner = primaryName === "乾隆朝鉴藏宝臣" ? partners.ritual : partners.treasure;
     if (partner.name === primaryName) partner = artifact?.id === "red_lacquer_table" ? partners.qianlong : partners.display;
     return partner;
   }
