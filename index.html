@@ -22,11 +22,10 @@
 
     body {
       margin: 0;
-      font-family: "Satoshi", "Aptos", "Microsoft YaHei", "PingFang SC", sans-serif;
+      font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
       background: #1d1511;
       color: var(--ink);
       overflow: hidden;
-      text-rendering: geometricPrecision;
     }
 
     button, input {
@@ -47,12 +46,6 @@
 
     .screen.active {
       display: block;
-      animation: screenIn 380ms cubic-bezier(.2,.8,.2,1);
-    }
-
-    @keyframes screenIn {
-      from { opacity: 0; transform: translateY(10px) scale(.995); }
-      to { opacity: 1; transform: translateY(0) scale(1); }
     }
 
     .gate {
@@ -78,7 +71,6 @@
       background: rgba(50, 28, 23, 0.55);
       backdrop-filter: blur(18px);
       box-shadow: var(--shadow);
-      transform: translateX(-16vw);
     }
 
     .eyebrow {
@@ -115,48 +107,35 @@
       color: #fff8ea;
       background: linear-gradient(135deg, var(--red), #b5653f);
       box-shadow: 0 12px 30px rgba(116, 40, 30, 0.28);
-      transition: transform 160ms ease, box-shadow 160ms ease;
     }
 
     .ghost-btn {
       color: var(--red-deep);
       background: rgba(255, 248, 234, 0.88);
       border: 1px solid rgba(99, 68, 44, 0.14);
-      transition: transform 160ms ease, background 160ms ease;
     }
 
     .text-btn {
       color: var(--ivory);
       background: rgba(255, 248, 234, 0.12);
       border: 1px solid rgba(255, 248, 234, 0.22);
-      transition: transform 160ms ease, background 160ms ease;
-    }
-
-    .primary-btn:hover, .ghost-btn:hover, .text-btn:hover {
-      transform: translateY(-1px);
-    }
-
-    .primary-btn:active, .ghost-btn:active, .text-btn:active {
-      transform: translateY(1px);
     }
 
     .map-screen {
       position: relative;
-      background:
-        linear-gradient(180deg, rgba(20, 12, 8, 0.16), rgba(20, 12, 8, 0.48)),
-        url("assets/palace-map-generated.png");
-      background-size: cover;
-      background-position: center;
+      background: #170f0c;
       color: var(--ivory);
-      isolation: isolate;
     }
 
     .map-bg {
       position: absolute;
       inset: 0;
-      z-index: 0;
-      background: linear-gradient(90deg, rgba(42, 17, 14, 0.34), rgba(42, 17, 14, 0.06));
-      pointer-events: none;
+      background:
+        linear-gradient(180deg, rgba(20, 12, 8, 0.16), rgba(20, 12, 8, 0.48)),
+        url("assets/palace-map-generated.png");
+      background-size: cover;
+      background-position: center;
+      transform: scale(1.01);
     }
 
     .map-topbar {
@@ -174,8 +153,8 @@
     .map-title {
       max-width: 620px;
       padding: 18px 20px;
-      border-radius: 24px;
-      background: linear-gradient(135deg, rgba(42, 22, 17, 0.75), rgba(42, 22, 17, 0.48));
+      border-radius: 18px;
+      background: rgba(41, 22, 17, 0.62);
       border: 1px solid rgba(255, 248, 234, 0.2);
       backdrop-filter: blur(18px);
       box-shadow: var(--shadow);
@@ -201,24 +180,17 @@
       justify-content: flex-end;
     }
 
-    #pinLayer {
-      position: absolute;
-      inset: 0;
-      z-index: 4;
-      pointer-events: none;
-    }
-
     .map-pin {
       position: absolute;
       left: calc(var(--x) * 1%);
       top: calc(var(--y) * 1%);
+      z-index: 4;
       transform: translate(-50%, -50%);
       display: grid;
       gap: 6px;
       justify-items: center;
       color: white;
       background: transparent;
-      pointer-events: auto;
     }
 
     .pin-dot {
@@ -228,12 +200,6 @@
       background: var(--red);
       border: 3px solid #fff0d4;
       box-shadow: 0 0 0 8px rgba(142, 47, 40, 0.18), 0 10px 24px rgba(0,0,0,0.28);
-      animation: pinBreath 2.8s ease-in-out infinite;
-    }
-
-    @keyframes pinBreath {
-      0%, 100% { transform: scale(1); box-shadow: 0 0 0 7px rgba(142, 47, 40, 0.16), 0 10px 24px rgba(0,0,0,0.25); }
-      50% { transform: scale(1.08); box-shadow: 0 0 0 12px rgba(142, 47, 40, 0.07), 0 13px 28px rgba(0,0,0,0.28); }
     }
 
     .pin-label {
@@ -246,7 +212,6 @@
       font-size: 13px;
       font-weight: 800;
       box-shadow: 0 10px 24px rgba(0,0,0,0.16);
-      backdrop-filter: blur(10px);
     }
 
     .pin-label span {
@@ -270,7 +235,6 @@
       border: 1px solid rgba(99, 68, 44, 0.18);
       line-height: 1.65;
       font-size: 13px;
-      box-shadow: 0 16px 40px rgba(39, 27, 18, 0.14);
     }
 
     .museum-page {
@@ -291,7 +255,6 @@
       background: rgba(255, 248, 234, 0.88);
       backdrop-filter: blur(18px);
       border-bottom: 1px solid var(--line);
-      box-shadow: 0 1px 0 rgba(255,255,255,.35);
     }
 
     .nav-title strong {
@@ -320,12 +283,12 @@
 
     .gallery-main {
       min-width: 0;
-      padding: clamp(24px, 3vw, 42px);
+      padding: 36px;
     }
 
     .gallery-hero {
       min-height: 280px;
-      border-radius: 30px;
+      border-radius: 24px;
       padding: 32px;
       color: var(--ivory);
       background:
@@ -337,18 +300,6 @@
       display: flex;
       flex-direction: column;
       justify-content: flex-end;
-      position: relative;
-      overflow: hidden;
-      isolation: isolate;
-    }
-
-    .gallery-hero::after {
-      content: "";
-      position: absolute;
-      inset: auto 0 0;
-      height: 42%;
-      background: linear-gradient(0deg, rgba(37, 19, 15, .38), transparent);
-      z-index: -1;
     }
 
     .gallery-hero h1 {
@@ -386,15 +337,15 @@
     .artifact-carousel {
       margin-top: 16px;
       display: flex;
-      gap: 22px;
+      gap: 18px;
       overflow-x: auto;
       scroll-snap-type: x mandatory;
-      padding: 4px 4px 30px;
+      padding: 4px 4px 22px;
     }
 
     .artifact-tile {
-      flex: 0 0 clamp(286px, 31vw, 360px);
-      min-height: 430px;
+      flex: 0 0 290px;
+      min-height: 360px;
       scroll-snap-align: start;
       border-radius: 22px;
       overflow: hidden;
@@ -404,60 +355,48 @@
       text-align: left;
       padding: 0;
       color: var(--ink);
-      transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
-      position: relative;
-    }
-
-    .artifact-tile:hover {
-      transform: translateY(-6px);
-      border-color: rgba(142, 47, 40, .35);
-      box-shadow: 0 24px 52px rgba(45, 30, 20, 0.16);
     }
 
     .artifact-visual {
-      height: 245px;
-      background: linear-gradient(135deg, #732e2a, #c09652);
-      background-image: url("assets/artifact-sprite-generated.png");
-      background-position: var(--artifact-x, 0%) var(--artifact-y, 0%);
-      background-size: 600% 300%;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .artifact-visual::before {
-      content: "";
-      position: absolute;
-      inset: 18px;
-      border-radius: 18px;
-      border: 1px solid rgba(255, 248, 234, .22);
-      pointer-events: none;
-    }
-
-    .artifact-visual::after {
-      content: "";
-      position: absolute;
-      inset: auto 0 0;
-      height: 34%;
-      background: linear-gradient(0deg, rgba(38, 24, 16, .22), transparent);
-      pointer-events: none;
-    }
-
-    .artifact-tile:nth-child(2n) .artifact-visual {
-      background: linear-gradient(135deg, #31576e, #7e765c);
-      background-image: url("assets/artifact-sprite-generated.png");
-      background-position: var(--artifact-x, 0%) var(--artifact-y, 0%);
-      background-size: 600% 300%;
-    }
-
-    .artifact-tile:nth-child(3n) .artifact-visual {
-      background: linear-gradient(135deg, #365f54, #b78d45);
-      background-image: url("assets/artifact-sprite-generated.png");
-      background-position: var(--artifact-x, 0%) var(--artifact-y, 0%);
-      background-size: 600% 300%;
-    }
+  height: 245px;
+  background: linear-gradient(135deg, #732e2a, #c09652);
+  background-image: url("assets/artifact-sprite-generated.png");
+  background-position: var(--artifact-x, 0%) var(--artifact-y, 0%);
+  background-size: 600% 300%;
+  position: relative;
+  overflow: hidden;
+}
+.artifact-visual::before {
+  content: "";
+  position: absolute;
+  inset: 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 248, 234, .22);
+  pointer-events: none;
+}
+.artifact-visual::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 34%;
+  background: linear-gradient(0deg, rgba(38, 24, 16, .22), transparent);
+  pointer-events: none;
+}
+.artifact-tile:nth-child(2n) .artifact-visual {
+  background: linear-gradient(135deg, #31576e, #7e765c);
+  background-image: url("assets/artifact-sprite-generated.png");
+  background-position: var(--artifact-x, 0%) var(--artifact-y, 0%);
+  background-size: 600% 300%;
+}
+.artifact-tile:nth-child(3n) .artifact-visual {
+  background: linear-gradient(135deg, #365f54, #b78d45);
+  background-image: url("assets/artifact-sprite-generated.png");
+  background-position: var(--artifact-x, 0%) var(--artifact-y, 0%);
+  background-size: 600% 300%;
+}
 
     .artifact-copy {
-      padding: 20px;
+      padding: 18px;
     }
 
     .artifact-copy strong {
@@ -486,19 +425,13 @@
       position: sticky;
       top: 68px;
       height: calc(100vh - 68px);
-      min-height: 0;
       border-left: 1px solid var(--line);
-      background:
-        radial-gradient(circle at 20% 0%, rgba(196, 154, 85, .16), transparent 28%),
-        rgba(255, 248, 234, 0.84);
+      background: rgba(255, 248, 234, 0.8);
       backdrop-filter: blur(14px);
       padding: 24px;
       display: flex;
       flex-direction: column;
       gap: 18px;
-      overflow-y: auto;
-      overscroll-behavior: contain;
-      scrollbar-gutter: stable;
     }
 
     .persona-card {
@@ -506,7 +439,6 @@
       border-radius: 20px;
       background: #fffaf0;
       border: 1px solid var(--line);
-      box-shadow: 0 18px 40px rgba(45, 30, 20, .08);
     }
 
     .avatar {
@@ -538,7 +470,6 @@
 
     .ai-output {
       min-height: 190px;
-      max-height: min(34vh, 330px);
       padding: 18px;
       border-radius: 20px;
       background: #fffaf0;
@@ -547,46 +478,12 @@
       line-height: 1.75;
       white-space: pre-wrap;
       color: #352821;
-      box-shadow: inset 0 1px 0 rgba(255,255,255,.58);
-    }
-
-    .rag-sources {
-      display: none;
-      gap: 8px;
-      flex-wrap: wrap;
-      padding: 12px;
-      border-radius: 16px;
-      background: rgba(255, 250, 240, .74);
-      border: 1px solid var(--line);
-      max-height: 132px;
-      overflow-y: auto;
-      flex: 0 0 auto;
-    }
-
-    .rag-sources.active {
-      display: flex;
-    }
-
-    .source-chip {
-      max-width: 100%;
-      padding: 7px 10px;
-      border-radius: 999px;
-      background: #fffdf8;
-      border: 1px solid rgba(99, 68, 44, .14);
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.35;
-    }
-
-    .source-chip strong {
-      color: var(--red-deep);
     }
 
     .ai-form {
-      margin-top: 0;
+      margin-top: auto;
       display: grid;
       gap: 10px;
-      flex: 0 0 auto;
     }
 
     .ai-form input {
@@ -605,60 +502,15 @@
       flex-wrap: wrap;
     }
 
-    .voice-status {
-      display: none;
-      padding: 12px 14px;
-      border-radius: 16px;
-      background: rgba(142, 47, 40, .08);
-      border: 1px solid rgba(142, 47, 40, .18);
-      color: var(--red-deep);
-      font-size: 13px;
-      line-height: 1.55;
-    }
-
-    .voice-status.active {
-      display: block;
-    }
-
-    .voice-status strong {
-      display: block;
-      margin-bottom: 3px;
-    }
-
-    .voice-status span {
-      color: var(--muted);
-    }
-
     audio {
       width: 100%;
       margin-top: 2px;
-      flex: 0 0 auto;
-    }
-
-    .audio-status {
-      display: none;
-      padding: 10px 12px;
-      border-radius: 14px;
-      background: rgba(54, 95, 84, .08);
-      border: 1px solid rgba(54, 95, 84, .16);
-      color: var(--jade);
-      font-size: 12px;
-      line-height: 1.5;
-      flex: 0 0 auto;
-    }
-
-    .audio-status.active {
-      display: block;
-    }
-
-    .audio-status strong {
-      color: var(--red-deep);
     }
 
     .detail-layout {
       min-height: calc(100vh - 68px);
       display: grid;
-      grid-template-columns: minmax(420px, 48vw) minmax(520px, 1fr);
+      grid-template-columns: minmax(0, 1.05fr) minmax(390px, 0.95fr);
     }
 
     .detail-visual {
@@ -666,55 +518,31 @@
       min-height: calc(100vh - 68px);
       display: grid;
       place-items: center;
-      padding: clamp(24px, 3vw, 42px);
+      padding: 42px;
       background:
-        linear-gradient(90deg, rgba(72,28,24,0.18), rgba(54,95,84,0.12)),
-        radial-gradient(circle at 50% 40%, rgba(255,248,234,0.5), rgba(72,28,24,0.42)),
-        #cdbd9d;
+        radial-gradient(circle at 50% 45%, rgba(255,248,234,0.2), rgba(72,28,24,0.78)),
+        linear-gradient(135deg, #57231f, #a7773f);
       color: var(--ivory);
     }
 
     .artifact-object {
-      width: min(100%, 620px);
-      max-height: calc(100vh - 164px);
-      aspect-ratio: 4 / 3;
+      width: min(520px, 70vw);
+      aspect-ratio: 1 / 1;
       display: grid;
       place-items: center;
-      padding: 0;
-      border-radius: 32px;
-      background:
-        url("assets/artifact-sprite-generated.png"),
-        linear-gradient(145deg, rgba(255, 248, 234, 0.18), rgba(255, 248, 234, 0.07));
-      background-position: var(--artifact-x, 0%) var(--artifact-y, 0%);
-      background-size: 600% 300%;
+      padding: 42px;
+      border-radius: 42px;
+      text-align: center;
+      background: rgba(255, 248, 234, 0.12);
       border: 1px solid rgba(255, 248, 234, 0.25);
       box-shadow: var(--shadow);
-      position: relative;
-      overflow: hidden;
-    }
-
-    .artifact-object::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(180deg, transparent 62%, rgba(28, 18, 13, .22));
-      pointer-events: none;
-    }
-
-    .artifact-object::after {
-      content: "";
-      position: absolute;
-      left: 18%;
-      right: 18%;
-      bottom: -34px;
-      height: 30px;
-      border-radius: 50%;
-      background: rgba(0,0,0,.16);
-      filter: blur(12px);
+      font-size: clamp(28px, 4vw, 52px);
+      line-height: 1.25;
+      font-weight: 900;
     }
 
     .detail-copy {
-      padding: clamp(26px, 4vw, 48px);
+      padding: 38px;
       overflow: auto;
       background: var(--paper);
     }
@@ -754,7 +582,6 @@
       border-radius: 20px;
       background: #fffaf0;
       border: 1px solid var(--line);
-      box-shadow: 0 18px 42px rgba(45, 30, 20, .1);
     }
 
     .detail-ai h3 {
@@ -768,28 +595,11 @@
       background: #fffdf8;
     }
 
-    .detail-ai .rag-sources {
-      margin-bottom: 12px;
-    }
-
-    @media (max-width: 1280px) {
-      .detail-layout {
-        grid-template-columns: 1fr;
-      }
-      .detail-visual {
-        min-height: 58vh;
-      }
-      .artifact-object {
-        width: min(720px, calc(100vw - 48px));
-        max-height: 50vh;
-      }
-    }
-
     @media (max-width: 1100px) {
       body { overflow: auto; }
       .screen { height: auto; min-height: 100vh; overflow: visible; }
       .map-screen { height: 100vh; overflow: hidden; }
-      .gallery-layout {
+      .gallery-layout, .detail-layout {
         grid-template-columns: 1fr;
       }
       .ai-panel {
@@ -820,33 +630,13 @@
         bottom: 16px;
       }
       .museum-nav {
-        height: auto;
-        min-height: 68px;
-        padding: 12px 14px;
-        align-items: flex-start;
-        flex-direction: column;
-        justify-content: center;
-      }
-      .nav-title {
-        min-width: 0;
-      }
-      .nav-actions {
-        width: 100%;
-        justify-content: flex-start;
-        flex-wrap: wrap;
+        padding: 0 14px;
       }
       .gallery-main, .detail-copy {
         padding: 20px;
       }
-      .section-row {
-        align-items: flex-start;
-        flex-direction: column;
-      }
       .artifact-tile {
         flex-basis: 250px;
-      }
-      .gate-panel {
-        transform: none;
       }
     }
   </style>
@@ -857,7 +647,7 @@
     <div class="eyebrow">Palace Museum Agent</div>
     <h1>故宫虚拟展馆</h1>
     <p>登录后进入全屏宫城地图。选择展馆、滑动文物、进入详情，并向对应历史人物提问。</p>
-    <button class="primary-btn" id="enterBtn">观众登录并进入</button>
+    <button type="button" class="primary-btn" id="enterBtn">观众登录并进入</button>
   </div>
 </section>
 
@@ -870,7 +660,7 @@
       <p id="mapOpening">点击地图中的展馆入口，进入展馆内部。</p>
     </div>
     <div class="map-actions">
-      <button class="text-btn" id="backGateBtn">退出</button>
+      <button type="button" class="text-btn" id="backGateBtn">退出</button>
     </div>
   </div>
   <div id="pinLayer"></div>
@@ -884,7 +674,7 @@
       <span id="galleryNavSub">选择文物进入详情，或直接向讲解者提问</span>
     </div>
     <div class="nav-actions">
-      <button class="ghost-btn" id="galleryBackMapBtn">返回地图</button>
+      <button type="button" class="ghost-btn" id="galleryBackMapBtn">返回地图</button>
     </div>
   </nav>
   <div class="gallery-layout">
@@ -899,7 +689,7 @@
           <h2>馆藏文物</h2>
           <p>横向滑动选择文物，点击卡片进入详情。</p>
         </div>
-        <button class="ghost-btn" id="galleryIntroBtn">请讲解本馆</button>
+        <button type="button" class="ghost-btn" id="galleryIntroBtn">请讲解本馆</button>
       </div>
       <div class="artifact-carousel" id="artifactCarousel"></div>
     </main>
@@ -911,15 +701,12 @@
       </div>
       <div class="ai-output" id="galleryAiOutput">可以在展馆内直接提问，例如：这个展馆最值得先看什么？</div>
       <audio id="galleryAudio" controls></audio>
-      <div class="audio-status" id="galleryAudioStatus" aria-live="polite"></div>
-      <div class="rag-sources" id="gallerySources"></div>
       <div class="ai-form">
         <input id="galleryQuestion" placeholder="向本馆讲解者提问">
         <div class="ai-buttons">
-          <button class="primary-btn" id="galleryAskBtn">提问</button>
-          <button class="ghost-btn" id="galleryVoiceBtn">语音</button>
+          <button type="button" class="primary-btn" id="galleryAskBtn">提问</button>
+          <button type="button" class="ghost-btn" id="galleryVoiceBtn">语音</button>
         </div>
-        <div class="voice-status" id="galleryVoiceStatus" aria-live="polite"></div>
       </div>
     </aside>
   </div>
@@ -932,8 +719,8 @@
       <span id="detailNavSub">详情页同样可以向当前历史人物提问</span>
     </div>
     <div class="nav-actions">
-      <button class="ghost-btn" id="detailBackGalleryBtn">返回展馆</button>
-      <button class="ghost-btn" id="detailBackMapBtn">返回地图</button>
+      <button type="button" class="ghost-btn" id="detailBackGalleryBtn">返回展馆</button>
+      <button type="button" class="ghost-btn" id="detailBackMapBtn">返回地图</button>
     </div>
   </nav>
   <div class="detail-layout">
@@ -950,16 +737,13 @@
         <h3 id="detailPersona">向讲解者提问</h3>
         <div class="ai-output" id="detailAiOutput">可以问：这件文物为什么重要？它和当时的宫廷生活有什么关系？</div>
         <audio id="detailAudio" controls></audio>
-        <div class="audio-status" id="detailAudioStatus" aria-live="polite"></div>
-        <div class="rag-sources" id="detailSources"></div>
         <div class="ai-form">
           <input id="detailQuestion" placeholder="围绕当前文物提问">
           <div class="ai-buttons">
-            <button class="primary-btn" id="detailIntroBtn">讲解文物</button>
-            <button class="primary-btn" id="detailAskBtn">提问</button>
-            <button class="ghost-btn" id="detailVoiceBtn">语音</button>
+            <button type="button" class="primary-btn" id="detailIntroBtn">讲解文物</button>
+            <button type="button" class="primary-btn" id="detailAskBtn">提问</button>
+            <button type="button" class="ghost-btn" id="detailVoiceBtn">语音</button>
           </div>
-          <div class="voice-status" id="detailVoiceStatus" aria-live="polite"></div>
         </div>
       </div>
     </main>
@@ -967,11 +751,8 @@
 </section>
 
 <script>
-  const apiParam = new URLSearchParams(window.location.search).get("api");
   const localHosts = new Set(["localhost", "127.0.0.1"]);
-  const API_BASE = apiParam
-    || window.API_BASE
-    || (localHosts.has(window.location.hostname) ? "http://127.0.0.1:8000" : window.location.origin);
+  const API_BASE = localHosts.has(window.location.hostname) ? "http://127.0.0.1:8000" : window.location.origin;
   let palace = null;
   let galleries = [];
   let activeGallery = null;
@@ -979,13 +760,22 @@
   let activeVoiceTarget = null;
   let recognition = null;
   let transcript = "";
-  let artifactOrder = [];
 
   const $ = (id) => document.getElementById(id);
   const screens = ["gateScreen", "mapScreen", "galleryScreen", "detailScreen"];
+  
   const spriteColumns = 6;
   const spriteRows = 3;
+  let artifactOrder = [];
 
+function artifactSpriteVars(artifact) {
+  const index = Math.max(0, artifactOrder.indexOf(artifact.id));
+  const col = index % spriteColumns;
+  const row = Math.floor(index / spriteColumns) % spriteRows;
+  const x = spriteColumns === 1 ? 0 : (col / (spriteColumns - 1)) * 100;
+  const y = spriteRows === 1 ? 0 : (row / (spriteRows - 1)) * 100;
+  return `--artifact-x: ${x}%; --artifact-y: ${y}%;`;
+}
   function showScreen(id) {
     screens.forEach((screenId) => $(screenId).classList.toggle("active", screenId === id));
   }
@@ -999,46 +789,11 @@
     });
   }
 
-  function clearSources(scope) {
-    const sourceBox = scope === "detail" ? $("detailSources") : $("gallerySources");
-    sourceBox.classList.remove("active");
-    sourceBox.innerHTML = "";
-  }
-
-  function renderSources(scope, contexts = []) {
-    const sourceBox = scope === "detail" ? $("detailSources") : $("gallerySources");
-    const unique = [];
-    const seen = new Set();
-    contexts.forEach((item) => {
-      const key = `${item.title}-${item.source}`;
-      if (!seen.has(key)) {
-        unique.push(item);
-        seen.add(key);
-      }
-    });
-    sourceBox.innerHTML = unique.slice(0, 4).map((item) => `
-      <span class="source-chip"><strong>${item.title}</strong> · ${item.source}</span>
-    `).join("");
-    sourceBox.classList.toggle("active", unique.length > 0);
-  }
-
-  function setVoiceStatus(scope, title, text = "", active = true) {
-    const box = scope === "detail" ? $("detailVoiceStatus") : $("galleryVoiceStatus");
-    box.innerHTML = title ? `<strong>${title}</strong><span>${text}</span>` : "";
-    box.classList.toggle("active", active && Boolean(title));
-  }
-
-  function setAudioStatus(scope, title, text = "", active = true) {
-    const box = scope === "detail" ? $("detailAudioStatus") : $("galleryAudioStatus");
-    box.innerHTML = title ? `<strong>${title}</strong>${text ? ` ${text}` : ""}` : "";
-    box.classList.toggle("active", active && Boolean(title));
-  }
-
   async function loadPalace() {
     const res = await fetch(`${API_BASE}/api/palace`);
     palace = await res.json();
     galleries = palace.galleries;
-    artifactOrder = galleries.flatMap((gallery) => gallery.artifacts.map((artifact) => artifact.id));
+    artifactOrder = galleries.flatMap((g) => g.artifacts.map((a) => a.id));
     $("mapTitle").innerText = palace.museum.title;
     $("mapOpening").innerText = palace.museum.opening;
     $("routeNote").innerText = palace.museum.route_note;
@@ -1069,23 +824,14 @@
     const layer = $("pinLayer");
     layer.innerHTML = "";
     galleries.forEach((gallery) => {
-      const pin = document.createElement("button");
+      const pin = document.createElement("div"); // 强改 div，消灭隐式提交
       pin.className = "map-pin";
       pin.style.setProperty("--x", gallery.x);
       pin.style.setProperty("--y", gallery.y);
       pin.innerHTML = `<span class="pin-dot"></span><span class="pin-label">${gallery.name}<span>${gallery.zone}</span></span>`;
-      pin.onclick = () => openGallery(gallery.id);
+      pin.onclick = (e) => { e.preventDefault(); openGallery(gallery.id); };
       layer.appendChild(pin);
     });
-  }
-
-  function artifactSpriteVars(artifact) {
-    const index = Math.max(0, artifactOrder.indexOf(artifact.id));
-    const col = index % spriteColumns;
-    const row = Math.floor(index / spriteColumns) % spriteRows;
-    const x = spriteColumns === 1 ? 0 : (col / (spriteColumns - 1)) * 100;
-    const y = spriteRows === 1 ? 0 : (row / (spriteRows - 1)) * 100;
-    return `--artifact-x: ${x}%; --artifact-y: ${y}%;`;
   }
 
   function openGallery(galleryId) {
@@ -1100,9 +846,7 @@
     $("galleryPersonaRole").innerText = `${activeGallery.persona.role}。${activeGallery.persona.voice}`;
     $("galleryQuestion").value = `请介绍${activeGallery.name}最值得看的文物`;
     $("galleryAiOutput").innerText = "可以在展馆内直接提问，例如：这个展馆最值得先看什么？";
-    clearSources("gallery");
     $("galleryAudio").removeAttribute("src");
-    setAudioStatus("gallery", "", "", false);
     renderArtifacts();
     showScreen("galleryScreen");
   }
@@ -1111,17 +855,24 @@
     const carousel = $("artifactCarousel");
     carousel.innerHTML = "";
     activeGallery.artifacts.forEach((artifact) => {
-      const tile = document.createElement("button");
+      // === 【核心修复一：全量将卡片转化为安全的 div，杜绝跳转真凶】 ===
+      const tile = document.createElement("div");
       tile.className = "artifact-tile";
       tile.innerHTML = `
-        <div class="artifact-visual" style="${artifactSpriteVars(artifact)}" role="img" aria-label="${artifact.title}：${artifact.image_hint}"></div>
-        <div class="artifact-copy">
+      <div class="artifact-visual" style="${artifactSpriteVars(artifact)}" role="img" aria-label="${artifact.title}：${artifact.image_hint}"></div> 
+      <div class="artifact-copy">
           <strong>${artifact.title}</strong>
           <span>${artifact.period}</span>
           <p>${artifact.description}</p>
         </div>
       `;
-      tile.onclick = () => openDetail(artifact.id);
+      tile.onclick = (e) => {
+        if (e) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+        openDetail(artifact.id);
+      };
       carousel.appendChild(tile);
     });
   }
@@ -1133,31 +884,26 @@
     $("detailTitle").innerText = activeArtifact.title;
     $("detailPeriod").innerText = activeArtifact.period;
     $("detailDescription").innerText = activeArtifact.description;
-    const detailVisual = $("detailVisual");
-    detailVisual.innerText = "";
-    detailVisual.style.cssText = artifactSpriteVars(activeArtifact);
-    detailVisual.setAttribute("aria-label", `${activeArtifact.title}：${activeArtifact.image_hint}`);
-    detailVisual.setAttribute("role", "img");
+    const detailVisual = $("detailVisual"); detailVisual.innerText = ""; detailVisual.style.cssText = artifactSpriteVars(activeArtifact); detailVisual.setAttribute("aria-label", `${activeArtifact.title}：${activeArtifact.image_hint}`); detailVisual.setAttribute("role", "img");
     $("detailSource").innerText = `出处：${activeArtifact.source}`;
     $("detailPersona").innerText = `向${activeGallery.persona.name}提问`;
     $("detailQuestion").value = `这件${activeArtifact.title}为什么重要？`;
     $("detailAiOutput").innerText = "可以问：这件文物为什么重要？它和当时的宫廷生活有什么关系？";
-    clearSources("detail");
     $("detailAudio").removeAttribute("src");
-    setAudioStatus("detail", "", "", false);
     showScreen("detailScreen");
   }
 
   async function ask(scope, mode = "chat") {
-    if (!activeGallery) return;
+    if (window.event) window.event.preventDefault();
+    if (!activeGallery) return false;
     if (!activeArtifact) activeArtifact = activeGallery.artifacts[0];
+    
     const questionInput = scope === "detail" ? $("detailQuestion") : $("galleryQuestion");
-    const question = mode === "intro"
-      ? `请讲解${activeArtifact.title}`
-      : questionInput.value;
+    const question = mode === "intro" ? `请讲解${activeArtifact.title}` : questionInput.value;
     const output = scope === "detail" ? $("detailAiOutput") : $("galleryAiOutput");
     const audio = scope === "detail" ? $("detailAudio") : $("galleryAudio");
-    setBusy(scope, true, "讲解者正在思索...");
+    
+    setBusy(scope, true, "讲解者正在思索理据...");
     audio.pause();
     try {
       const res = await fetch(`${API_BASE}/api/palace/chat`, {
@@ -1170,48 +916,22 @@
           mode
         })
       });
-      if (!res.ok) {
-        const message = await res.text();
-        throw new Error(message || `请求失败：${res.status}`);
-      }
       const data = await res.json();
       if (data.status !== "success") throw new Error(data.message || "生成失败");
       output.innerText = data.speech_text;
-      if (data.warnings && data.warnings.length) {
-        output.innerText += `\n\n提示：${data.warnings.join("；")}`;
-      }
-      renderSources(scope, data.contexts || []);
-      if (data.audio_url) {
-        setAudioStatus(scope, "正在加载音频", "生成完成，正在准备播放器。");
-        const audioUrl = new URL(data.audio_url, API_BASE).href;
-        audio.onloadedmetadata = () => {
-          setAudioStatus(scope, "音频已就绪", "可以点击播放器播放。");
-        };
-        audio.oncanplay = () => {
-          setAudioStatus(scope, "音频已就绪", "可以点击播放器播放。");
-        };
-        audio.onerror = () => {
-          setAudioStatus(scope, "音频加载失败", "请刷新后重试，或先查看文字讲解。");
-        };
-        audio.src = audioUrl + "?t=" + Date.now();
-        audio.load();
-        setTimeout(() => {
-          audio.play().then(() => {
-            setAudioStatus(scope, "正在播放", "可以用播放器暂停或调整进度。");
-          }).catch(() => {
-            setAudioStatus(scope, "音频已生成", "浏览器拦截自动播放，请点击播放器播放。");
-          });
-        }, 100);
-      } else {
-        audio.removeAttribute("src");
-        audio.load();
-        setAudioStatus(scope, "语音暂不可用", "可以先查看文字讲解。");
-      }
+      audio.src = data.audio_url + "?t=" + Date.now();
+      audio.load();
+      setTimeout(() => {
+        audio.play().catch(() => {
+          output.innerText = data.speech_text;
+        });
+      }, 100);
     } catch (err) {
-      output.innerText = err.message;
+      output.innerText = "抱歉，系统暂时开小差了，请确保本地后端已正常拉起。";
     } finally {
       setBusy(scope, false);
     }
+    return false;
   }
 
   function setupVoice() {
@@ -1219,83 +939,50 @@
     if (!SpeechRecognition) {
       $("galleryVoiceBtn").disabled = true;
       $("detailVoiceBtn").disabled = true;
-      setVoiceStatus("gallery", "当前浏览器不支持语音识别", "请使用 Chrome 或 Edge，并允许麦克风权限。");
-      setVoiceStatus("detail", "当前浏览器不支持语音识别", "请使用 Chrome 或 Edge，并允许麦克风权限。");
       return;
     }
     recognition = new SpeechRecognition();
     recognition.lang = "zh-CN";
     recognition.continuous = false;
-    recognition.interimResults = true;
-    recognition.onstart = () => {
-      const scope = activeVoiceTarget || "gallery";
-      transcript = "";
-      setVoiceStatus(scope, "正在听，请开始说话", "识别到的文字会实时显示在这里。");
-    };
     recognition.onresult = (event) => {
-      let interim = "";
-      let finalText = "";
-      for (let i = event.resultIndex; i < event.results.length; i += 1) {
-        const text = event.results[i][0].transcript;
-        if (event.results[i].isFinal) {
-          finalText += text;
-        } else {
-          interim += text;
-        }
-      }
-      transcript = finalText || interim || transcript;
-      const scope = activeVoiceTarget || "gallery";
+      transcript = event.results[0][0].transcript;
       const input = activeVoiceTarget === "detail" ? $("detailQuestion") : $("galleryQuestion");
       input.value = transcript;
-      setVoiceStatus(scope, finalText ? "已识别到语音" : "正在识别", transcript || "继续说，我在听。");
-    };
-    recognition.onerror = (event) => {
-      const scope = activeVoiceTarget || "gallery";
-      const tips = {
-        "not-allowed": "浏览器没有麦克风权限，请在地址栏允许麦克风后重试。",
-        "no-speech": "没有听到清晰语音，可以靠近麦克风再试一次。",
-        "audio-capture": "没有检测到可用麦克风，请检查系统输入设备。",
-        "network": "浏览器语音识别服务连接失败，请稍后重试。",
-      };
-      setVoiceStatus(scope, "语音识别失败", tips[event.error] || `错误：${event.error}`);
     };
     recognition.onend = () => {
-      const scope = activeVoiceTarget || "gallery";
-      if (transcript) {
-        setVoiceStatus(scope, "识别完成，正在提问", transcript);
-        ask(scope);
-      } else {
-        setVoiceStatus(scope, "没有识别到文字", "请再点击语音按钮试一次。");
-      }
+      if (transcript) ask(activeVoiceTarget || "gallery");
     };
   }
 
-  function startVoice(scope) {
-    activeVoiceTarget = scope;
-    transcript = "";
-    setVoiceStatus(scope, "正在请求麦克风权限", "如果浏览器弹出提示，请选择允许。");
-    if (!recognition) return;
-    try {
-      recognition.start();
-    } catch (err) {
-      setVoiceStatus(scope, "语音识别已在运行", "请说完当前这句话，或稍等一秒后再试。");
-    }
-  }
+  // === 【核心修复二：强力防御拦截，全量剥夺浏览器的自动提交刷新权】 ===
+  $("enterBtn").onclick = (e) => { if (e) e.preventDefault(); showScreen("mapScreen"); return false; };
+  $("backGateBtn").onclick = (e) => { if (e) e.preventDefault(); showScreen("gateScreen"); return false; };
+  $("galleryBackMapBtn").onclick = (e) => { if (e) e.preventDefault(); showScreen("mapScreen"); return false; };
+  $("detailBackGalleryBtn").onclick = (e) => { if (e) e.preventDefault(); showScreen("galleryScreen"); return false; };
+  $("detailBackMapBtn").onclick = (e) => { if (e) e.preventDefault(); showScreen("mapScreen"); return false; };
+  
+  $("galleryIntroBtn").onclick = (e) => { if (e) e.preventDefault(); ask("gallery", "intro"); return false; };
+  $("galleryAskBtn").onclick = (e) => { if (e) e.preventDefault(); ask("gallery", "chat"); return false; };
+  $("detailIntroBtn").onclick = (e) => { if (e) e.preventDefault(); ask("detail", "intro"); return false; };
+  $("detailAskBtn").onclick = (e) => { if (e) e.preventDefault(); ask("detail", "chat"); return false; };
+  
+  // 斩断输入框敲击回车的隐式提交刷新
+  $("galleryQuestion").onkeydown = (e) => { if (e.key === "Enter" || e.keyCode === 13) { e.preventDefault(); ask("gallery", "chat"); return false; } };
+  $("detailQuestion").onkeydown = (e) => { if (e.key === "Enter" || e.keyCode === 13) { e.preventDefault(); ask("detail", "chat"); return false; } };
 
-  $("enterBtn").onclick = () => showScreen("mapScreen");
-  $("backGateBtn").onclick = () => showScreen("gateScreen");
-  $("galleryBackMapBtn").onclick = () => showScreen("mapScreen");
-  $("detailBackGalleryBtn").onclick = () => showScreen("galleryScreen");
-  $("detailBackMapBtn").onclick = () => showScreen("mapScreen");
-  $("galleryIntroBtn").onclick = () => ask("gallery", "intro");
-  $("galleryAskBtn").onclick = () => ask("gallery", "chat");
-  $("detailIntroBtn").onclick = () => ask("detail", "intro");
-  $("detailAskBtn").onclick = () => ask("detail", "chat");
-  $("galleryVoiceBtn").onclick = () => {
-    startVoice("gallery");
+  $("galleryVoiceBtn").onclick = (e) => {
+    if (e) e.preventDefault();
+    activeVoiceTarget = "gallery";
+    transcript = "";
+    recognition && recognition.start();
+    return false;
   };
-  $("detailVoiceBtn").onclick = () => {
-    startVoice("detail");
+  $("detailVoiceBtn").onclick = (e) => {
+    if (e) e.preventDefault();
+    activeVoiceTarget = "detail";
+    transcript = "";
+    recognition && recognition.start();
+    return false;
   };
 
   setupVoice();
