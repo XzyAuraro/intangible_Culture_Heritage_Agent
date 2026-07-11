@@ -709,8 +709,8 @@
     }
 
     .guide-widget.dual {
-      width: min(430px, calc(100vw - 28px));
-      grid-template-columns: 156px minmax(0, 1fr);
+      width: min(560px, calc(100vw - 28px));
+      grid-template-columns: 1fr;
     }
 
     .guide-stage {
@@ -723,8 +723,10 @@
     }
 
     .guide-widget.dual .guide-stage {
-      width: 156px;
-      justify-content: space-between;
+      width: 100%;
+      min-height: 214px;
+      justify-content: center;
+      gap: clamp(104px, 18vw, 166px);
     }
 
     .guide-figure {
@@ -740,7 +742,7 @@
     }
 
     .guide-widget.dual .guide-figure {
-      transform: scale(.86);
+      transform: scale(.92);
       transform-origin: bottom center;
     }
 
@@ -846,6 +848,73 @@
       border: 1px solid rgba(99, 68, 44, .18);
       box-shadow: 0 18px 44px rgba(31, 20, 14, .16);
       backdrop-filter: blur(16px);
+    }
+
+    .guide-widget.dual > .guide-bubble {
+      display: none;
+    }
+
+    .guide-character-bubble {
+      position: absolute;
+      left: 50%;
+      bottom: 116px;
+      width: 210px;
+      min-height: 82px;
+      transform: translateX(-50%);
+      padding: 12px 13px;
+      border-radius: 17px;
+      background: rgba(255, 250, 240, .97);
+      border: 1px solid rgba(99, 68, 44, .2);
+      box-shadow: 0 16px 34px rgba(31, 20, 14, .16);
+      color: var(--muted);
+      opacity: 0;
+      pointer-events: auto;
+      transition: opacity 180ms ease, transform 180ms ease;
+      z-index: 8;
+    }
+
+    .guide-character-bubble::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      bottom: -9px;
+      width: 16px;
+      height: 16px;
+      transform: translateX(-50%) rotate(45deg);
+      background: rgba(255, 250, 240, .97);
+      border-right: 1px solid rgba(99, 68, 44, .18);
+      border-bottom: 1px solid rgba(99, 68, 44, .18);
+    }
+
+    .guide-character-bubble strong {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--red-deep);
+      font-size: 13px;
+      line-height: 1.25;
+    }
+
+    .guide-character-bubble p {
+      margin: 0;
+      font-size: 12px;
+      line-height: 1.55;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .guide-widget.dual .guide-character-bubble {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .guide-figure.primary .guide-character-bubble {
+      border-top: 3px solid var(--guide-accent, var(--jade));
+    }
+
+    .guide-figure.secondary .guide-character-bubble {
+      border-top: 3px solid var(--guide-accent-secondary, #31576e);
     }
 
     .guide-bubble strong {
@@ -1081,13 +1150,15 @@
         bottom: 12px;
       }
       .guide-widget.dual {
-        grid-template-columns: 108px minmax(0, 1fr);
+        grid-template-columns: 1fr;
       }
       .guide-stage {
         width: 60px;
       }
       .guide-widget.dual .guide-stage {
-        width: 108px;
+        width: 100%;
+        min-height: 172px;
+        gap: 52px;
       }
       .guide-figure {
         width: 60px;
@@ -1096,7 +1167,20 @@
         transform-origin: bottom left;
       }
       .guide-widget.dual .guide-figure {
-        transform: scale(.62);
+        transform: scale(.7);
+      }
+      .guide-character-bubble {
+        width: min(42vw, 158px);
+        min-height: 76px;
+        bottom: 106px;
+        padding: 10px 11px;
+      }
+      .guide-character-bubble strong {
+        font-size: 12px;
+      }
+      .guide-character-bubble p {
+        font-size: 11px;
+        -webkit-line-clamp: 3;
       }
     }
   </style>
@@ -1223,6 +1307,10 @@
 <div class="guide-widget" id="guideWidget" aria-live="polite">
   <div class="guide-stage" aria-hidden="true">
     <div class="guide-figure primary">
+      <div class="guide-character-bubble">
+        <strong id="guidePrimaryName">讲解者</strong>
+        <p id="guidePrimaryLine">我先从文物本身说起。</p>
+      </div>
       <div class="guide-hat"></div>
       <div class="guide-head" id="guideInitial">宫</div>
       <div class="guide-sleeve left"></div>
@@ -1230,6 +1318,10 @@
       <div class="guide-sleeve right"></div>
     </div>
     <div class="guide-figure secondary">
+      <div class="guide-character-bubble">
+        <strong id="guideSecondaryName">讲解者</strong>
+        <p id="guideSecondaryLine">我补充另一个角度。</p>
+      </div>
       <div class="guide-hat"></div>
       <div class="guide-head" id="guideInitialSecondary">礼</div>
       <div class="guide-sleeve left"></div>
@@ -1394,6 +1486,28 @@
     return compact.length > max ? `${compact.slice(0, max)}...` : compact;
   }
 
+  function escapeRegExp(text) {
+    return String(text || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+
+  function parseDialogueForGuides(sceneText, personas = []) {
+    const lines = {};
+    personas.forEach((persona) => {
+      if (persona?.name) lines[persona.name] = "";
+    });
+    if (!sceneText || !personas.length) return lines;
+    const names = personas.map((persona) => persona?.name).filter(Boolean);
+    if (!names.length) return lines;
+    const speakerPattern = new RegExp(`^(${names.map(escapeRegExp).join("|")})\\s*[：:]\\s*(.+)$`);
+    const boundaryPattern = new RegExp(`\\s+(?=(?:${names.map(escapeRegExp).join("|")})\\s*[：:])`, "g");
+    String(sceneText).replace(boundaryPattern, "\n").split(/\n+/).forEach((rawLine) => {
+      const line = rawLine.trim();
+      const match = line.match(speakerPattern);
+      if (match) lines[match[1]] = match[2].trim();
+    });
+    return lines;
+  }
+
   function updateGuide(persona, options = {}) {
     const guide = $("guideWidget");
     if (!guide || !persona) return;
@@ -1405,6 +1519,10 @@
     guide.classList.toggle("speaking", state === "speaking");
     guide.style.setProperty("--guide-accent", personaAccent(persona));
     $("guideInitial").innerText = persona.name.slice(0, 1);
+    $("guidePrimaryName").innerText = persona.name;
+    $("guidePrimaryLine").innerText = clipGuideLine(options.line || persona.voice || "我会围绕当前文物为你讲解。", 72);
+    $("guideSecondaryName").innerText = "";
+    $("guideSecondaryLine").innerText = "";
     $("guideName").innerText = persona.name;
     $("guideLine").innerText = clipGuideLine(options.line || persona.voice || "我会围绕当前文物为你讲解。");
     $("guideStatus").innerText = options.status || `${stage} · 第 ${score} 次交流`;
@@ -1425,6 +1543,13 @@
     guide.style.setProperty("--guide-accent-secondary", personaAccent(partner));
     $("guideInitial").innerText = primary.name.slice(0, 1);
     $("guideInitialSecondary").innerText = partner.name.slice(0, 1);
+    const dialogueLines = options.dialogueLines || parseDialogueForGuides(options.sceneText, [primary, partner]);
+    const primaryLine = dialogueLines[primary.name] || primary.voice || "我先从文物主人的视角说起。";
+    const partnerLine = dialogueLines[partner.name] || partner.voice || "我补充工艺、制度或陈设角度。";
+    $("guidePrimaryName").innerText = primary.name;
+    $("guidePrimaryLine").innerText = clipGuideLine(primaryLine, 78);
+    $("guideSecondaryName").innerText = partner.name;
+    $("guideSecondaryLine").innerText = clipGuideLine(partnerLine, 78);
     $("guideName").innerText = `${primary.name} × ${partner.name}`;
     $("guideLine").innerText = clipGuideLine(options.line || "两位讲解者正在从不同角度说明这件文物。", 64);
     $("guideStatus").innerText = options.status || `${stage} · 双人讲解`;
@@ -1756,6 +1881,7 @@
       renderSources(scope, data.contexts || []);
       updateDualGuide(data.personas || [persona], {
         state: "speaking",
+        sceneText: data.scene_text,
         line: partner ? `我和${partner.name}正在从两个角度讲解。` : "双人讲解已经生成。",
         status: `${relationshipStage(nextScore)} · 双人讲解`
       });
@@ -1770,6 +1896,7 @@
         };
         audio.onended = () => {
           updateDualGuide(data.personas || [persona], {
+            sceneText: data.scene_text,
             line: "双人讲解先到这里。你可以继续追问两位角色提到的制度、工艺或审美线索。",
             status: `${relationshipStage(nextScore)} · 待命`
           });
@@ -1777,6 +1904,7 @@
         audio.onerror = () => {
           setAudioStatus(scope, "音频加载失败", "请刷新后重试，或先查看文字讲解。");
           updateDualGuide(data.personas || [persona], {
+            sceneText: data.scene_text,
             line: "双人讲解文字已生成，但音频暂时没有顺利加载。",
             status: "音频受阻"
           });
