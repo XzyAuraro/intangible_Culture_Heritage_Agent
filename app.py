@@ -1,3 +1,4 @@
+import asyncio
 import json
 import math
 import os
@@ -7,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 import edge_tts
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, File, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -59,6 +60,8 @@ client = OpenAI(
     api_key=API_KEY or "missing-key",
     base_url=os.getenv("DASHSCOPE_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1"),
 )
+
+DEVICE_RELATIONSHIPS: dict[str, int] = {}
 
 
 DEFAULT_KNOWLEDGE: dict[str, Any] = {
@@ -384,6 +387,11 @@ async def synthesize(text: str) -> str:
     return f"/static/{audio_name}"
 
 
+async def synthesize_with_timeout(text: str) -> str:
+    timeout = float(os.getenv("TTS_TIMEOUT_SECONDS", "25"))
+    return await asyncio.wait_for(synthesize(text), timeout=timeout)
+
+
 def sanitize_tts_text(text: str) -> str:
     clean_text = text.replace("——", "，").replace("……", "。")
     clean_text = clean_text.replace("《", "").replace("》", "")
@@ -422,6 +430,15 @@ class PalaceSceneRequest(BaseModel):
     gallery_id: str | None = None
     artifact_id: str | None = None
     relationship_score: int = 1
+
+
+class DeviceChatRequest(BaseModel):
+    device_id: str = "web-simulator"
+    text: str = "请讲解当前文物。"
+    gallery_id: str | None = None
+    artifact_id: str | None = None
+    mode: str = "chat"
+    with_audio: bool = True
 
 
 @app.get("/api/health")
@@ -812,7 +829,7 @@ async def palace_chat(payload: PalaceChatRequest):
         speech_text = build_palace_fallback(bundle)
         warnings.append(f"模型生成暂时不可用，已改用本地 RAG 资料回答：{type(exc).__name__}")
     try:
-        audio_url = await synthesize(speech_text)
+        audio_url = await synthesize_with_timeout(speech_text)
     except Exception as exc:
         audio_url = ""
         warnings.append(f"语音合成暂时不可用：{type(exc).__name__}")
@@ -836,6 +853,66 @@ async def palace_chat(payload: PalaceChatRequest):
     }
 
 
+@app.post("/api/device/chat")
+async def device_chat(payload: DeviceChatRequest, request: Request):
+    device_id = re.sub(r"[^a-zA-Z0-9_.:-]", "_", payload.device_id.strip() or "web-simulator")[:80]
+    question = payload.text.strip() or "请讲解当前文物。"
+    bundle = retrieve_palace(question, payload.gallery_id, payload.artifact_id)
+    gallery = bundle["gallery"]
+    artifact = bundle["artifact"]
+    persona = get_artifact_persona(gallery, artifact)
+    relationship_key = f"{device_id}::{artifact['id']}::{persona['name']}"
+    relationship_score = max(1, min(DEVICE_RELATIONSHIPS.get(relationship_key, 1), 50))
+    warnings = []
+    try:
+        speech_text = call_palace_llm(question, bundle, payload.mode, relationship_score)
+    except Exception as exc:
+        speech_text = build_palace_fallback(bundle)
+        warnings.append(f"模型生成暂时不可用，已改用本地 RAG 资料回答：{type(exc).__name__}")
+    if payload.with_audio:
+        try:
+            audio_url = await synthesize_with_timeout(speech_text)
+        except Exception as exc:
+            audio_url = ""
+            warnings.append(f"语音合成暂时不可用：{type(exc).__name__}")
+    else:
+        audio_url = ""
+    next_score = min(relationship_score + 1, 50)
+    DEVICE_RELATIONSHIPS[relationship_key] = next_score
+    base_url = str(request.base_url).rstrip("/")
+    audio_absolute_url = f"{base_url}{audio_url}" if audio_url else ""
+    return {
+        "status": "success",
+        "degraded": bool(warnings),
+        "warnings": warnings,
+        "device_id": device_id,
+        "input_text": question,
+        "gallery_id": gallery["id"],
+        "gallery_name": gallery["name"],
+        "artifact_id": artifact["id"],
+        "artifact_title": artifact["title"],
+        "persona": persona,
+        "relationship_score": next_score,
+        "relationship_stage": describe_relationship(next_score),
+        "reply_text": speech_text,
+        "speech_text": speech_text,
+        "contexts": bundle["contexts"],
+        "audio_url": audio_url,
+        "audio_absolute_url": audio_absolute_url,
+        "with_audio": payload.with_audio,
+        "device_contract": {
+            "request": {
+                "device_id": device_id,
+                "gallery_id": gallery["id"],
+                "artifact_id": artifact["id"],
+                "text": "请讲解这件文物。",
+                "with_audio": payload.with_audio,
+            },
+            "playback": "硬件端可直接播放 audio_absolute_url；网页端可使用 audio_url。",
+        },
+    }
+
+
 @app.post("/api/palace/scene-chat")
 async def palace_scene_chat(payload: PalaceSceneRequest):
     bundle = retrieve_palace(payload.question, payload.gallery_id, payload.artifact_id)
@@ -849,7 +926,7 @@ async def palace_scene_chat(payload: PalaceSceneRequest):
         scene_text, personas = build_scene_fallback(bundle)
         warnings.append(f"双人讲解暂时改用本地 RAG 资料生成：{type(exc).__name__}")
     try:
-        audio_url = await synthesize(strip_dialogue_speakers(scene_text, personas))
+        audio_url = await synthesize_with_timeout(strip_dialogue_speakers(scene_text, personas))
     except Exception as exc:
         audio_url = ""
         warnings.append(f"语音合成暂时不可用：{type(exc).__name__}")
@@ -882,7 +959,7 @@ async def chat_endpoint(
     question = text_fallback or "请讲讲沧浪亭。"
     contexts = retrieve(question, spot_id=spot_id)
     speech_text = call_llm(question, contexts, mode)
-    audio_url = await synthesize(speech_text)
+    audio_url = await synthesize_with_timeout(speech_text)
     primary = contexts[0] if contexts else None
     return JSONResponse(
         {
@@ -912,7 +989,7 @@ async def chat_endpoint(
 async def chat_json(payload: ChatRequest):
     contexts = retrieve(payload.question, spot_id=payload.spot_id)
     speech_text = call_llm(payload.question, contexts, payload.mode)
-    audio_url = await synthesize(speech_text)
+    audio_url = await synthesize_with_timeout(speech_text)
     primary = contexts[0] if contexts else None
     return {
         "status": "success",

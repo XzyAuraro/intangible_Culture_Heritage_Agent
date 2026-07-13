@@ -140,6 +140,12 @@
       transform: translateY(1px);
     }
 
+    .gate-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
     .map-screen {
       position: relative;
       background:
@@ -271,6 +277,135 @@
       line-height: 1.65;
       font-size: 13px;
       box-shadow: 0 16px 40px rgba(39, 27, 18, 0.14);
+    }
+
+    .device-screen {
+      background:
+        radial-gradient(circle at 18% 12%, rgba(196, 154, 85, .2), transparent 30%),
+        linear-gradient(135deg, #231611, #4a221d 42%, #efe4d0 42%, #f5eddf);
+      color: var(--ink);
+      overflow: auto;
+    }
+
+    .device-shell {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
+      gap: clamp(22px, 4vw, 46px);
+      padding: clamp(24px, 5vw, 60px);
+      align-items: center;
+    }
+
+    .device-panel {
+      border-radius: 26px;
+      padding: 24px;
+      background: rgba(255, 248, 234, .94);
+      border: 1px solid rgba(99, 68, 44, .18);
+      box-shadow: var(--shadow);
+    }
+
+    .device-panel.dark {
+      color: var(--ivory);
+      background: linear-gradient(160deg, rgba(72, 28, 24, .96), rgba(35, 22, 17, .96));
+      border-color: rgba(255, 248, 234, .16);
+    }
+
+    .device-face {
+      display: grid;
+      gap: 16px;
+    }
+
+    .device-display {
+      min-height: 220px;
+      padding: 22px;
+      border-radius: 18px;
+      background: #110f0d;
+      border: 1px solid rgba(255, 248, 234, .18);
+      box-shadow: inset 0 0 40px rgba(0,0,0,.38);
+    }
+
+    .device-display strong {
+      display: block;
+      color: #f5d29a;
+      font-size: 15px;
+      margin-bottom: 10px;
+    }
+
+    .device-display p {
+      margin: 0;
+      color: #f8ead0;
+      line-height: 1.75;
+    }
+
+    .device-lightbar {
+      height: 10px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--jade), var(--gold), var(--red));
+      box-shadow: 0 0 22px rgba(196, 154, 85, .42);
+    }
+
+    .device-controls {
+      display: grid;
+      gap: 12px;
+    }
+
+    .device-field {
+      display: grid;
+      gap: 7px;
+    }
+
+    .device-field label {
+      color: var(--red-deep);
+      font-weight: 800;
+      font-size: 13px;
+    }
+
+    .device-field input,
+    .device-field select {
+      width: 100%;
+      min-height: 44px;
+      padding: 0 14px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255, 250, 240, .95);
+      color: var(--ink);
+    }
+
+    .device-inline {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      color: var(--red-deep);
+      font-weight: 800;
+      font-size: 13px;
+    }
+
+    .device-inline input {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--red);
+    }
+
+    .device-output {
+      min-height: 220px;
+      white-space: pre-wrap;
+    }
+
+    .device-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 14px 0;
+    }
+
+    .device-chip {
+      padding: 7px 10px;
+      border-radius: 999px;
+      color: var(--red-deep);
+      background: rgba(196, 154, 85, .16);
+      border: 1px solid rgba(99, 68, 44, .14);
+      font-size: 12px;
+      font-weight: 800;
     }
 
     .museum-page {
@@ -1084,6 +1219,10 @@
       body { overflow: auto; }
       .screen { height: auto; min-height: 100vh; overflow: visible; }
       .map-screen { height: 100vh; overflow: hidden; }
+      .device-shell {
+        grid-template-columns: 1fr;
+        align-items: stretch;
+      }
       .gallery-layout {
         grid-template-columns: 1fr;
       }
@@ -1191,7 +1330,10 @@
     <div class="eyebrow">Palace Museum Agent</div>
     <h1>故宫虚拟展馆</h1>
     <p>登录后进入全屏宫城地图。选择展馆、滑动文物、进入详情，并向对应历史人物提问。</p>
-    <button type="button" class="primary-btn" id="enterBtn">观众登录并进入</button>
+    <div class="gate-actions">
+      <button type="button" class="primary-btn" id="enterBtn">观众登录并进入</button>
+      <button type="button" class="text-btn" id="deviceModeBtn">讲解器模拟</button>
+    </div>
   </div>
 </section>
 
@@ -1204,11 +1346,71 @@
       <p id="mapOpening">点击地图中的展馆入口，进入展馆内部。</p>
     </div>
     <div class="map-actions">
+      <button type="button" class="text-btn" id="mapDeviceBtn">讲解器模拟</button>
       <button type="button" class="text-btn" id="backGateBtn">退出</button>
     </div>
   </div>
   <div id="pinLayer"></div>
   <div class="map-hint" id="routeNote">地图为教学 Demo 示意，不是精确测绘图。</div>
+</section>
+
+<section id="deviceScreen" class="screen device-screen">
+  <div class="device-shell">
+    <section class="device-panel dark">
+      <div class="eyebrow">Device Simulation</div>
+      <h1>智能讲解器模式</h1>
+      <p>这里模拟未来小智、ESP32 或树莓派讲解终端调用后端接口的过程：设备上传文字、展馆与文物 ID，后端返回角色讲解、音频地址和 RAG 来源。</p>
+      <div class="device-face">
+        <div class="device-display">
+          <strong id="deviceDisplayTitle">等待设备请求</strong>
+          <p id="deviceDisplayText">选择展馆和文物后，点击“模拟设备提问”。如果未来接入真实硬件，只需要调用同一个 /api/device/chat 接口。</p>
+        </div>
+        <div class="device-lightbar"></div>
+        <audio id="deviceAudio" controls></audio>
+        <div class="audio-status" id="deviceAudioStatus" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <section class="device-panel">
+      <div class="section-row">
+        <div>
+          <div class="eyebrow">硬件接口预演</div>
+          <h2>设备请求控制台</h2>
+          <p>这不是另一套聊天逻辑，而是给未来实体讲解器预留的同一套 Agent 能力。</p>
+        </div>
+        <button type="button" class="ghost-btn" id="deviceBackMapBtn">返回地图</button>
+      </div>
+      <div class="device-controls">
+        <div class="device-field">
+          <label for="deviceIdInput">设备 ID</label>
+          <input id="deviceIdInput" value="web-simulator-001">
+        </div>
+        <div class="device-field">
+          <label for="deviceGallerySelect">当前展馆</label>
+          <select id="deviceGallerySelect"></select>
+        </div>
+        <div class="device-field">
+          <label for="deviceArtifactSelect">当前文物</label>
+          <select id="deviceArtifactSelect"></select>
+        </div>
+        <div class="device-field">
+          <label for="deviceQuestionInput">设备识别到的文字</label>
+          <input id="deviceQuestionInput" value="请用一分钟讲解这件文物">
+        </div>
+        <label class="device-inline" for="deviceAudioToggle">
+          <input id="deviceAudioToggle" type="checkbox" checked>
+          返回可播放语音
+        </label>
+        <div class="ai-buttons">
+          <button type="button" class="primary-btn" id="deviceAskBtn">模拟设备提问</button>
+          <button type="button" class="ghost-btn" id="deviceSyncBtn">同步当前文物</button>
+        </div>
+      </div>
+      <div class="device-meta" id="deviceMeta"></div>
+      <div class="ai-output device-output" id="deviceOutput">硬件返回结果会显示在这里。</div>
+      <div class="rag-sources" id="deviceSources"></div>
+    </section>
+  </div>
 </section>
 
 <section id="galleryScreen" class="screen museum-page">
@@ -1353,7 +1555,7 @@
   let relationshipState = {};
 
   const $ = (id) => document.getElementById(id);
-  const screens = ["gateScreen", "mapScreen", "galleryScreen", "detailScreen"];
+  const screens = ["gateScreen", "mapScreen", "deviceScreen", "galleryScreen", "detailScreen"];
   const spriteColumns = 6;
   const spriteRows = 3;
 
@@ -1364,22 +1566,22 @@
   }
 
   function setBusy(scope, busy, text) {
-    const output = scope === "detail" ? $("detailAiOutput") : $("galleryAiOutput");
+    const output = scope === "device" ? $("deviceOutput") : scope === "detail" ? $("detailAiOutput") : $("galleryAiOutput");
     if (text) output.innerText = text;
-    ["galleryAskBtn", "galleryIntroBtn", "gallerySceneBtn", "detailAskBtn", "detailIntroBtn", "detailSceneBtn"].forEach((id) => {
+    ["galleryAskBtn", "galleryIntroBtn", "gallerySceneBtn", "detailAskBtn", "detailIntroBtn", "detailSceneBtn", "deviceAskBtn"].forEach((id) => {
       const el = $(id);
       if (el) el.disabled = busy;
     });
   }
 
   function clearSources(scope) {
-    const sourceBox = scope === "detail" ? $("detailSources") : $("gallerySources");
+    const sourceBox = scope === "device" ? $("deviceSources") : scope === "detail" ? $("detailSources") : $("gallerySources");
     sourceBox.classList.remove("active");
     sourceBox.innerHTML = "";
   }
 
   function renderSources(scope, contexts = []) {
-    const sourceBox = scope === "detail" ? $("detailSources") : $("gallerySources");
+    const sourceBox = scope === "device" ? $("deviceSources") : scope === "detail" ? $("detailSources") : $("gallerySources");
     const unique = [];
     const seen = new Set();
     contexts.forEach((item) => {
@@ -1402,7 +1604,7 @@
   }
 
   function setAudioStatus(scope, title, text = "", active = true) {
-    const box = scope === "detail" ? $("detailAudioStatus") : $("galleryAudioStatus");
+    const box = scope === "device" ? $("deviceAudioStatus") : scope === "detail" ? $("detailAudioStatus") : $("galleryAudioStatus");
     box.innerHTML = title ? `<strong>${title}</strong>${text ? ` ${text}` : ""}` : "";
     box.classList.toggle("active", active && Boolean(title));
   }
@@ -1424,6 +1626,10 @@
     const view = params.get("view");
     const galleryId = params.get("gallery") || galleries[0]?.id;
     const artifactId = params.get("artifact");
+    if (view === "device") {
+      openDeviceMode();
+      return;
+    }
     if (view === "map") {
       showScreen("mapScreen");
       return;
@@ -1450,6 +1656,56 @@
       pin.onclick = () => openGallery(gallery.id);
       layer.appendChild(pin);
     });
+  }
+
+  function renderDeviceOptions() {
+    const gallerySelect = $("deviceGallerySelect");
+    const artifactSelect = $("deviceArtifactSelect");
+    if (!gallerySelect || !artifactSelect || !galleries.length) return;
+    gallerySelect.innerHTML = galleries.map((gallery) => `
+      <option value="${gallery.id}">${gallery.name}</option>
+    `).join("");
+    const gallery = activeGallery || galleries[0];
+    gallerySelect.value = gallery.id;
+    renderDeviceArtifactOptions(gallery.id, activeArtifact?.id);
+  }
+
+  function renderDeviceArtifactOptions(galleryId, preferredArtifactId) {
+    const artifactSelect = $("deviceArtifactSelect");
+    const gallery = galleries.find((item) => item.id === galleryId) || galleries[0];
+    if (!artifactSelect || !gallery) return;
+    artifactSelect.innerHTML = gallery.artifacts.map((artifact) => `
+      <option value="${artifact.id}">${artifact.title}</option>
+    `).join("");
+    const artifact = gallery.artifacts.find((item) => item.id === preferredArtifactId) || gallery.artifacts[0];
+    artifactSelect.value = artifact.id;
+  }
+
+  function selectedDeviceBundle() {
+    const galleryId = $("deviceGallerySelect").value || galleries[0]?.id;
+    const gallery = galleries.find((item) => item.id === galleryId) || galleries[0];
+    const artifactId = $("deviceArtifactSelect").value || gallery?.artifacts?.[0]?.id;
+    const artifact = gallery?.artifacts?.find((item) => item.id === artifactId) || gallery?.artifacts?.[0];
+    return { gallery, artifact };
+  }
+
+  function syncDeviceToCurrentArtifact() {
+    if (!galleries.length) return;
+    const gallery = activeGallery || galleries[0];
+    const artifact = activeArtifact || gallery.artifacts[0];
+    $("deviceGallerySelect").value = gallery.id;
+    renderDeviceArtifactOptions(gallery.id, artifact.id);
+    $("deviceDisplayTitle").innerText = `${gallery.name} · ${artifact.title}`;
+    $("deviceDisplayText").innerText = "已同步网页当前文物。你可以把这里理解成硬件通过二维码、NFC 或按键选中了这件展品。";
+  }
+
+  function openDeviceMode() {
+    if (!galleries.length) return;
+    renderDeviceOptions();
+    syncDeviceToCurrentArtifact();
+    clearSources("device");
+    setAudioStatus("device", "", "", false);
+    showScreen("deviceScreen");
   }
 
   function artifactSpriteVars(artifact) {
@@ -1934,6 +2190,77 @@
     }
   }
 
+  async function deviceTalk() {
+    if (!galleries.length) return;
+    const { gallery, artifact } = selectedDeviceBundle();
+    if (!gallery || !artifact) return;
+    const deviceId = $("deviceIdInput").value.trim() || "web-simulator-001";
+    const text = $("deviceQuestionInput").value.trim() || "请讲解这件文物";
+    const withAudio = $("deviceAudioToggle").checked;
+    const audio = $("deviceAudio");
+    setBusy("device", true, "设备请求已发送，Agent 正在组织讲解...");
+    $("deviceDisplayTitle").innerText = `${gallery.name} · ${artifact.title}`;
+    $("deviceDisplayText").innerText = "正在等待后端返回文字、音频地址和来源。";
+    $("deviceMeta").innerHTML = `
+      <span class="device-chip">device_id: ${deviceId}</span>
+      <span class="device-chip">artifact_id: ${artifact.id}</span>
+      <span class="device-chip">POST /api/device/chat</span>
+    `;
+    clearSources("device");
+    audio.pause();
+    try {
+      const res = await fetch(`${API_BASE}/api/device/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          device_id: deviceId,
+          gallery_id: gallery.id,
+          artifact_id: artifact.id,
+          text,
+          mode: "chat",
+          with_audio: withAudio
+        })
+      });
+      if (!res.ok) {
+        const message = await res.text();
+        throw new Error(message || `请求失败：${res.status}`);
+      }
+      const data = await res.json();
+      if (data.status !== "success") throw new Error(data.message || "设备请求失败");
+      $("deviceOutput").innerText = data.reply_text;
+      $("deviceDisplayTitle").innerText = `${data.persona?.name || "讲解者"} · ${data.artifact_title}`;
+      $("deviceDisplayText").innerText = clipGuideLine(data.reply_text, 118);
+      $("deviceMeta").innerHTML = `
+        <span class="device-chip">${data.gallery_name}</span>
+        <span class="device-chip">${data.artifact_title}</span>
+        <span class="device-chip">${data.persona?.name || "讲解者"}</span>
+        <span class="device-chip">第 ${data.relationship_score} 次设备交流</span>
+      `;
+      if (data.warnings && data.warnings.length) {
+        $("deviceOutput").innerText += `\n\n提示：${data.warnings.join("；")}`;
+      }
+      renderSources("device", data.contexts || []);
+      if (data.audio_url) {
+        const audioUrl = new URL(data.audio_url, API_BASE).href;
+        setAudioStatus("device", "音频已生成", "硬件端可播放 audio_absolute_url，网页端可点击下方播放器。");
+        audio.oncanplay = () => setAudioStatus("device", "音频已就绪", "可以点击播放器播放。");
+        audio.onerror = () => setAudioStatus("device", "音频加载失败", "请稍后重试，或先查看文字结果。");
+        audio.src = audioUrl + "?t=" + Date.now();
+        audio.load();
+      } else {
+        audio.removeAttribute("src");
+        audio.load();
+        setAudioStatus("device", withAudio ? "语音暂不可用" : "已跳过语音生成", "接口已返回文字讲解和来源。");
+      }
+    } catch (err) {
+      $("deviceOutput").innerText = err.message;
+      $("deviceDisplayText").innerText = "设备请求没有顺利完成，请检查后端接口或稍后重试。";
+      setAudioStatus("device", "", "", false);
+    } finally {
+      setBusy("device", false);
+    }
+  }
+
   function scenePartnerPreview(gallery, artifact, primary) {
     const galleryId = gallery?.id || "";
     const primaryName = primary?.name || "";
@@ -1976,9 +2303,21 @@
     event.preventDefault();
     showScreen("mapScreen");
   };
+  $("deviceModeBtn").onclick = (event) => {
+    event.preventDefault();
+    openDeviceMode();
+  };
+  $("mapDeviceBtn").onclick = (event) => {
+    event.preventDefault();
+    openDeviceMode();
+  };
   $("backGateBtn").onclick = (event) => {
     event.preventDefault();
     showScreen("gateScreen");
+  };
+  $("deviceBackMapBtn").onclick = (event) => {
+    event.preventDefault();
+    showScreen("mapScreen");
   };
   $("galleryBackMapBtn").onclick = (event) => {
     event.preventDefault();
@@ -2015,6 +2354,23 @@
   $("detailSceneBtn").onclick = (event) => {
     event.preventDefault();
     sceneTalk("detail");
+  };
+  $("deviceGallerySelect").onchange = () => {
+    renderDeviceArtifactOptions($("deviceGallerySelect").value);
+  };
+  $("deviceSyncBtn").onclick = (event) => {
+    event.preventDefault();
+    syncDeviceToCurrentArtifact();
+  };
+  $("deviceAskBtn").onclick = (event) => {
+    event.preventDefault();
+    deviceTalk();
+  };
+  $("deviceQuestionInput").onkeydown = (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      deviceTalk();
+    }
   };
   $("galleryQuestion").onkeydown = (event) => {
     if (event.key === "Enter") {
