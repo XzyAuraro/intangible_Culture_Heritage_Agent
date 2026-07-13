@@ -391,6 +391,27 @@
       white-space: pre-wrap;
     }
 
+    .stackchan-line {
+      display: none;
+      margin: 14px 0;
+      padding: 14px 15px;
+      border-radius: 18px;
+      color: var(--red-deep);
+      background: rgba(255, 250, 240, .9);
+      border: 1px solid rgba(142, 47, 40, .18);
+      line-height: 1.7;
+    }
+
+    .stackchan-line.active {
+      display: block;
+    }
+
+    .stackchan-line strong {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 13px;
+    }
+
     .device-meta {
       display: flex;
       flex-wrap: wrap;
@@ -1407,6 +1428,10 @@
         </div>
       </div>
       <div class="device-meta" id="deviceMeta"></div>
+      <div class="stackchan-line" id="stackchanLineBox">
+        <strong>Stack-chan 台词</strong>
+        <span id="stackchanLineText">等待生成。</span>
+      </div>
       <div class="ai-output device-output" id="deviceOutput">硬件返回结果会显示在这里。</div>
       <div class="rag-sources" id="deviceSources"></div>
     </section>
@@ -1697,6 +1722,7 @@
     renderDeviceArtifactOptions(gallery.id, artifact.id);
     $("deviceDisplayTitle").innerText = `${gallery.name} · ${artifact.title}`;
     $("deviceDisplayText").innerText = "已同步网页当前文物。你可以把这里理解成硬件通过二维码、NFC 或按键选中了这件展品。";
+    $("stackchanLineBox").classList.remove("active");
   }
 
   function openDeviceMode() {
@@ -2201,6 +2227,7 @@
     setBusy("device", true, "设备请求已发送，Agent 正在组织讲解...");
     $("deviceDisplayTitle").innerText = `${gallery.name} · ${artifact.title}`;
     $("deviceDisplayText").innerText = "正在等待后端返回文字、音频地址和来源。";
+    $("stackchanLineBox").classList.remove("active");
     $("deviceMeta").innerHTML = `
       <span class="device-chip">device_id: ${deviceId}</span>
       <span class="device-chip">artifact_id: ${artifact.id}</span>
@@ -2228,6 +2255,10 @@
       const data = await res.json();
       if (data.status !== "success") throw new Error(data.message || "设备请求失败");
       $("deviceOutput").innerText = data.reply_text;
+      if (data.stackchan_line) {
+        $("stackchanLineText").innerText = data.stackchan_line;
+        $("stackchanLineBox").classList.add("active");
+      }
       $("deviceDisplayTitle").innerText = `${data.persona?.name || "讲解者"} · ${data.artifact_title}`;
       $("deviceDisplayText").innerText = clipGuideLine(data.reply_text, 118);
       $("deviceMeta").innerHTML = `
@@ -2255,6 +2286,7 @@
     } catch (err) {
       $("deviceOutput").innerText = err.message;
       $("deviceDisplayText").innerText = "设备请求没有顺利完成，请检查后端接口或稍后重试。";
+      $("stackchanLineBox").classList.remove("active");
       setAudioStatus("device", "", "", false);
     } finally {
       setBusy("device", false);

@@ -409,6 +409,34 @@ def strip_dialogue_speakers(text: str, personas: list[dict[str, Any]]) -> str:
     return "\n".join(line for line in lines if line)
 
 
+def build_stackchan_line(text: str, artifact: dict[str, Any], persona: dict[str, Any]) -> str:
+    clean_text = strip_dialogue_speakers(text, [persona])
+    clean_text = re.sub(r"【[^】]+】", "", clean_text)
+    clean_text = re.sub(r"\s+", " ", clean_text).strip()
+    sentences = [item.strip() for item in re.split(r"(?<=[。！？!?])", clean_text) if item.strip()]
+    line = "".join(sentences[:2]) if sentences else clean_text
+    if len(line) > 92:
+        line = line[:90].rstrip("，、；：,. ") + "。"
+    if not line:
+        line = f"我是{persona.get('name', '讲解者')}。现在为你讲解{artifact['title']}。"
+    return line
+
+
+def stackchan_payload(line: str, artifact: dict[str, Any], persona: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "tool": "stackchan.say",
+        "arguments": {
+            "text": line,
+            "emotion": "happy",
+            "face": "talk",
+            "artifact_id": artifact["id"],
+            "persona": persona.get("name", "讲解者"),
+        },
+        "execute": False,
+        "note": "仅用于预览未来 MCP 调用格式；当前不会连接或控制实体硬件。",
+    }
+
+
 class ChatRequest(BaseModel):
     question: str
     spot_id: str | None = None
@@ -881,6 +909,7 @@ async def device_chat(payload: DeviceChatRequest, request: Request):
     DEVICE_RELATIONSHIPS[relationship_key] = next_score
     base_url = str(request.base_url).rstrip("/")
     audio_absolute_url = f"{base_url}{audio_url}" if audio_url else ""
+    stackchan_line = build_stackchan_line(speech_text, artifact, persona)
     return {
         "status": "success",
         "degraded": bool(warnings),
@@ -896,6 +925,8 @@ async def device_chat(payload: DeviceChatRequest, request: Request):
         "relationship_stage": describe_relationship(next_score),
         "reply_text": speech_text,
         "speech_text": speech_text,
+        "stackchan_line": stackchan_line,
+        "mcp_preview": stackchan_payload(stackchan_line, artifact, persona),
         "contexts": bundle["contexts"],
         "audio_url": audio_url,
         "audio_absolute_url": audio_absolute_url,
@@ -909,6 +940,7 @@ async def device_chat(payload: DeviceChatRequest, request: Request):
                 "with_audio": payload.with_audio,
             },
             "playback": "硬件端可直接播放 audio_absolute_url；网页端可使用 audio_url。",
+            "stackchan_line": "如果只让 Stack-chan 说出台词，可读取 stackchan_line；需要 MCP 时再把 mcp_preview 转成真实工具调用。",
         },
     }
 
