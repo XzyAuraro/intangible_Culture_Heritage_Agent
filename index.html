@@ -6,23 +6,24 @@
   <title>故宫虚拟展馆 Agent</title>
   <style>
     :root {
-      --ink: #201814;
-      --muted: #786d61;
-      --ivory: #fff8ea;
-      --paper: #f2eadb;
-      --line: rgba(99, 68, 44, 0.18);
-      --red: #8e2f28;
-      --red-deep: #481c18;
-      --gold: #c49a55;
-      --jade: #365f54;
-      --shadow: 0 22px 70px rgba(31, 20, 14, 0.22);
-    }
+  --ink: #2A1408;
+  --muted: #8C6A4A;
+  --ivory: #FFF3DC;
+  --paper: #F4E3C1;
+  --line: rgba(139, 69, 19, 0.28);
+  --red: #9E1F26;
+  --red-deep: #6B0F14;
+  --gold: #D4A017;
+  --jade: #365f54;
+  --shadow: 0 22px 70px rgba(60, 20, 10, 0.32);
+}
+
 
     * { box-sizing: border-box; }
 
     body {
       margin: 0;
-      font-family: "Satoshi", "Aptos", "Microsoft YaHei", "PingFang SC", sans-serif;
+      font-family: "STKaiti", "KaiTi", "FangSong", "STFangsong", "Microsoft YaHei", "PingFang SC", serif;
       background: #1d1511;
       color: var(--ink);
       overflow: hidden;
@@ -50,10 +51,31 @@
       animation: screenIn 380ms cubic-bezier(.2,.8,.2,1);
     }
 
-    @keyframes screenIn {
-      from { opacity: 0; transform: translateY(10px) scale(.995); }
-      to { opacity: 1; transform: translateY(0) scale(1); }
-    }
+    .screen {
+  display: none;
+  transform-style: preserve-3d;
+  transform-origin: left center;
+}
+
+.screen.active {
+  display: block;
+  animation: screenIn 900ms cubic-bezier(.4, 0, .2, 1);
+}
+
+@keyframes screenIn {
+  0% {
+    opacity: 0;
+    transform: perspective(1600px) rotateY(-92deg) translateX(-6%);
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: perspective(1600px) rotateY(0deg) translateX(0);
+  }
+}
+
 
     .gate {
       position: relative;
@@ -105,40 +127,56 @@
     }
 
     .primary-btn, .ghost-btn, .text-btn {
-      min-height: 42px;
-      border-radius: 999px;
-      padding: 0 18px;
-      font-weight: 700;
-    }
+  min-height: 44px;
+  padding: 0 20px;
+  font-weight: 700;
+}
 
-    .primary-btn {
-      color: #fff8ea;
-      background: linear-gradient(135deg, var(--red), #b5653f);
-      box-shadow: 0 12px 30px rgba(116, 40, 30, 0.28);
-      transition: transform 160ms ease, box-shadow 160ms ease;
-    }
+/* 玉玺风格：主按钮做成印章造型 */
+.primary-btn {
+  color: #FFF3DC;
+  background: linear-gradient(160deg, var(--red) 0%, var(--red-deep) 100%);
+  border-radius: 10px;
+  border: 2px solid var(--gold);
+  box-shadow: 0 10px 26px rgba(107, 15, 20, 0.4), inset 0 0 0 2px rgba(255, 243, 220, 0.15);
+  position: relative;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
 
-    .ghost-btn {
-      color: var(--red-deep);
-      background: rgba(255, 248, 234, 0.88);
-      border: 1px solid rgba(99, 68, 44, 0.14);
-      transition: transform 160ms ease, background 160ms ease;
-    }
+.primary-btn::before {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border: 1px solid rgba(255, 243, 220, 0.35);
+  border-radius: 6px;
+  pointer-events: none;
+}
 
-    .text-btn {
-      color: var(--ivory);
-      background: rgba(255, 248, 234, 0.12);
-      border: 1px solid rgba(255, 248, 234, 0.22);
-      transition: transform 160ms ease, background 160ms ease;
-    }
+/* 奏折风格：次级按钮做成卷边纸条 */
+.ghost-btn {
+  color: var(--red-deep);
+  background: linear-gradient(180deg, #FFF9EC 0%, #F4E3C1 100%);
+  border-radius: 4px 12px 4px 12px;
+  border: 1px solid var(--gold);
+  box-shadow: 0 6px 16px rgba(139, 69, 19, 0.18), inset 0 0 0 1px rgba(212, 160, 23, 0.2);
+  transition: transform 160ms ease, background 160ms ease;
+}
 
-    .primary-btn:hover, .ghost-btn:hover, .text-btn:hover {
-      transform: translateY(-1px);
-    }
+.text-btn {
+  color: var(--ivory);
+  background: rgba(255, 243, 220, 0.12);
+  border-radius: 999px;
+  border: 1px solid rgba(255, 243, 220, 0.3);
+  transition: transform 160ms ease, background 160ms ease;
+}
 
-    .primary-btn:active, .ghost-btn:active, .text-btn:active {
-      transform: translateY(1px);
-    }
+.primary-btn:hover, .ghost-btn:hover, .text-btn:hover {
+  transform: translateY(-1px);
+}
+
+.primary-btn:active, .ghost-btn:active, .text-btn:active {
+  transform: translateY(1px);
+}
 
     .gate-actions {
       display: flex;
@@ -1343,7 +1381,97 @@
         -webkit-line-clamp: 3;
       }
     }
-  </style>
+
+/* 字体大小调节功能 */
+:root {
+  --user-font-scale: 1;
+}
+
+body {
+  font-size: calc(1rem * var(--user-font-scale));
+}
+
+#fontSizeControl {
+  position: fixed;
+  left: 16px;
+  bottom: 90px;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #FFF8EA;
+  border: 1px solid rgba(99, 68, 44, 0.18);
+  border-radius: 999px;
+  padding: 6px 10px;
+  box-shadow: 0 4px 14px rgba(32, 24, 20, 0.15);
+  font-family: inherit;
+}
+
+#fontSizeControl button {
+  min-width: 30px;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: none;
+  background: #8E2F28;
+  color: #FFF8EA;
+  font-size: 13px;
+  line-height: 30px;
+  white-space: nowrap;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#fontSizeControl button:hover {
+  opacity: 0.85;
+}
+
+#fontSizeControl span {
+  font-size: 12px;
+  color: #786D61;
+  min-width: 30px;
+  text-align: center;
+  white-space: nowrap;
+}
+.screen-viewport {
+  perspective: 1600px;
+}
+.detail-visual {
+  position: relative;
+  overflow: hidden;
+}
+
+.artifact-seal {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  background: linear-gradient(135deg, #8E2F28 0%, #6f221c 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform-origin: top left;
+  transition: transform 1.4s cubic-bezier(0.65, 0, 0.35, 1), opacity 0.5s ease 1s;
+}
+
+.artifact-seal::after {
+  content: '封';
+  color: #F2EADB;
+  font-size: 28px;
+  font-family: "KaiTi", "STKaiti", serif;
+  letter-spacing: 4px;
+  border: 2px solid #F2EADB;
+  padding: 6px 10px;
+  border-radius: 4px;
+}
+
+.artifact-seal.torn {
+  transform: translateX(-15%) translateY(-115%) rotate(-8deg);
+  opacity: 0;
+}
+
+</style>
 </head>
 <body>
 <section id="gateScreen" class="screen gate active">
@@ -1933,6 +2061,20 @@
     });
   }
 
+  function playSealRevealEffect() {
+  const wrap = document.querySelector(".detail-visual");
+  if (!wrap) return;
+  const oldSeal = wrap.querySelector(".artifact-seal");
+  if (oldSeal) oldSeal.remove();
+  const seal = document.createElement("div");
+  seal.className = "artifact-seal";
+  wrap.appendChild(seal);
+  setTimeout(() => {
+    seal.classList.add("torn");
+    setTimeout(() => seal.remove(), 1450);
+  }, 500);
+}
+
   function openDetail(artifactId) {
     activeArtifact = activeGallery.artifacts.find((artifact) => artifact.id === artifactId) || activeGallery.artifacts[0];
     const persona = getArtifactPersona(activeArtifact, activeGallery);
@@ -1946,6 +2088,9 @@
     detailVisual.style.cssText = artifactSpriteVars(activeArtifact);
     detailVisual.setAttribute("aria-label", `${activeArtifact.title}：${activeArtifact.image_hint}`);
     detailVisual.setAttribute("role", "img");
+        detailVisual.setAttribute("role", "img");
+    playSealRevealEffect();   // 新增：触发揭封条效果
+    $("detailSource").innerText = `出处：${activeArtifact.source}`;
     $("detailSource").innerText = `出处：${activeArtifact.source}`;
     $("detailPersona").innerText = `向${persona.name}提问`;
     $("galleryAvatar").innerText = persona.name.slice(0, 1);
@@ -2431,5 +2576,47 @@
     $("mapOpening").innerText = "无法连接后端，请确认 app.py 已启动。";
   });
 </script>
+
+<div id="fontSizeControl">
+  <button id="fontDecrease" aria-label="缩小字体">A-</button>
+  <span id="fontScaleLabel">100%</span>
+  <button id="fontIncrease" aria-label="放大字体">A+</button>
+  <button id="fontReset" aria-label="重置字体">重置</button>
+</div>
+
+<script>
+(function () {
+  var root = document.documentElement;
+  var label = document.getElementById('fontScaleLabel');
+  var STORAGE_KEY = 'palaceAgentFontScale';
+  var MIN_SCALE = 0.85;
+  var MAX_SCALE = 1.4;
+  var STEP = 0.1;
+
+  function applyScale(scale) {
+    scale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale));
+    root.style.setProperty('--user-font-scale', scale.toFixed(2));
+    label.textContent = Math.round(scale * 100) + '%';
+    localStorage.setItem(STORAGE_KEY, scale.toFixed(2));
+    return scale;
+  }
+
+  var saved = parseFloat(localStorage.getItem(STORAGE_KEY));
+  var currentScale = applyScale(isNaN(saved) ? 1 : saved);
+
+  document.getElementById('fontIncrease').addEventListener('click', function () {
+    currentScale = applyScale(currentScale + STEP);
+  });
+
+  document.getElementById('fontDecrease').addEventListener('click', function () {
+    currentScale = applyScale(currentScale - STEP);
+  });
+
+  document.getElementById('fontReset').addEventListener('click', function () {
+    currentScale = applyScale(1);
+  });
+})();
+</script>
+
 </body>
 </html>
