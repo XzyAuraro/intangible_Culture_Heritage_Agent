@@ -3,3 +3,6 @@ uvicorn
 openai
 edge-tts
 python-multipart
+websockets>=15.0.1
+mcp>=1.20.0
+python-dotenv>=1.0.0
