@@ -30,30 +30,29 @@ def compact_text(text: str, max_chars: int = 300) -> str:
 
 def resolve_ids_from_question(question: str, gallery_id: str = "", artifact_id: str = "") -> tuple[str, str]:
     """Prefer explicit gallery/artifact names spoken by the user over stale device context."""
-    if gallery_id and artifact_id:
-        return gallery_id, artifact_id
-
     palace = load_palace()
     query = question or ""
-    resolved_gallery = gallery_id
-    resolved_artifact = artifact_id
+    explicit_gallery = ""
+    explicit_artifact = ""
 
     for gallery in palace["galleries"]:
         gallery_aliases = {gallery["id"], gallery["name"], gallery["name"].replace("馆", "")}
-        if not resolved_gallery and any(alias and alias in query for alias in gallery_aliases):
-            resolved_gallery = gallery["id"]
+        if any(alias and alias in query for alias in gallery_aliases):
+            explicit_gallery = gallery["id"]
         for artifact in gallery["artifacts"]:
             artifact_aliases = {
                 artifact["id"],
                 artifact["title"],
                 artifact["title"].replace("《", "").replace("》", ""),
             }
-            if not resolved_artifact and any(alias and alias in query for alias in artifact_aliases):
-                resolved_gallery = gallery["id"]
-                resolved_artifact = artifact["id"]
+            if any(alias and alias in query for alias in artifact_aliases):
+                explicit_gallery = gallery["id"]
+                explicit_artifact = artifact["id"]
                 break
 
-    return resolved_gallery, resolved_artifact
+    if explicit_gallery:
+        return explicit_gallery, explicit_artifact
+    return gallery_id, artifact_id
 
 
 @mcp.tool()
