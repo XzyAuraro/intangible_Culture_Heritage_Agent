@@ -1,10 +1,11 @@
 import logging
+import os
 import sys
 from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
-from app import build_palace_fallback, call_palace_llm, get_artifact_persona, retrieve_palace
+from app import build_palace_fallback, call_palace_llm, get_artifact_persona, load_palace, retrieve_palace
 
 
 if sys.platform == "win32":
@@ -16,11 +17,43 @@ logger = logging.getLogger("stackchan_palace_mcp")
 mcp = FastMCP("PalaceMuseumGuide")
 
 
+def use_llm_for_stackchan() -> bool:
+    return os.getenv("STACKCHAN_MCP_USE_LLM", "").strip().lower() in {"1", "true", "yes", "on"}
+
+
 def compact_text(text: str, max_chars: int = 300) -> str:
     compact = " ".join(str(text or "").split())
     if len(compact) <= max_chars:
         return compact
     return compact[: max_chars - 1].rstrip("，、；：,. ") + "。"
+
+
+def resolve_ids_from_question(question: str, gallery_id: str = "", artifact_id: str = "") -> tuple[str, str]:
+    """Prefer explicit gallery/artifact names spoken by the user over stale device context."""
+    if gallery_id and artifact_id:
+        return gallery_id, artifact_id
+
+    palace = load_palace()
+    query = question or ""
+    resolved_gallery = gallery_id
+    resolved_artifact = artifact_id
+
+    for gallery in palace["galleries"]:
+        gallery_aliases = {gallery["id"], gallery["name"], gallery["name"].replace("馆", "")}
+        if not resolved_gallery and any(alias and alias in query for alias in gallery_aliases):
+            resolved_gallery = gallery["id"]
+        for artifact in gallery["artifacts"]:
+            artifact_aliases = {
+                artifact["id"],
+                artifact["title"],
+                artifact["title"].replace("《", "").replace("》", ""),
+            }
+            if not resolved_artifact and any(alias and alias in query for alias in artifact_aliases):
+                resolved_gallery = gallery["id"]
+                resolved_artifact = artifact["id"]
+                break
+
+    return resolved_gallery, resolved_artifact
 
 
 @mcp.tool()
@@ -33,15 +66,17 @@ def palace_museum_guide(
     """当用户要求 StackChan 做故宫讲解员、讲解展馆或文物时调用。只返回讲解文本，不控制硬件动作、表情、灯光或舵机。"""
     safe_max = max(80, min(int(max_chars or 300), 500))
     query = (question or "请讲解当前文物。").strip()
-    bundle = retrieve_palace(query, gallery_id or None, artifact_id or None)
+    resolved_gallery_id, resolved_artifact_id = resolve_ids_from_question(query, gallery_id, artifact_id)
+    bundle = retrieve_palace(query, resolved_gallery_id or None, resolved_artifact_id or None)
     gallery = bundle["gallery"]
     artifact = bundle["artifact"]
     persona = get_artifact_persona(gallery, artifact)
-    try:
-        reply = call_palace_llm(query, bundle, mode="chat", relationship_score=1)
-    except Exception as exc:
-        logger.warning("LLM unavailable, using local RAG fallback: %s", type(exc).__name__)
-        reply = build_palace_fallback(bundle)
+    reply = build_palace_fallback(bundle)
+    if use_llm_for_stackchan():
+        try:
+            reply = call_palace_llm(query, bundle, mode="chat", relationship_score=1)
+        except Exception as exc:
+            logger.warning("LLM unavailable, using local RAG fallback: %s", type(exc).__name__)
     line = compact_text(reply, safe_max)
     return {
         "success": True,
@@ -51,6 +86,7 @@ def palace_museum_guide(
         "artifact_id": artifact["id"],
         "artifact_title": artifact["title"],
         "persona": persona.get("name", "讲解者"),
+        "resolved_from_question": bool(resolved_gallery_id or resolved_artifact_id),
         "safety": "text_only_no_hardware_action",
     }
 
