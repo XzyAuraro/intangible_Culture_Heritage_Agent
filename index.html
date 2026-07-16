@@ -2682,12 +2682,36 @@ setInterval(updateHeatLevels, 4000);
 let visitedGalleries = {};
 
 const collectionData = {
-  architecture: { name: "故宫红墙", rarity: "传世", img: "https://images.unsplash.com/photo-1599571234909-29ed5d1321d6?w=400&h=400&fit=crop" },
-  clocks: { name: "西洋钟表", rarity: "孤品", img: "https://images.unsplash.com/photo-1508057198894-247b23fe5ade?w=400&h=400&fit=crop" },
-  treasures: { name: "金器宝物", rarity: "御用", img: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=400&h=400&fit=crop" },
-  ceramics: { name: "青花瓷器", rarity: "至宝", img: "https://images.unsplash.com/photo-1610701596007-11502861dcfa?w=400&h=400&fit=crop" },
-  furniture: { name: "红木家具", rarity: "典藏", img: "https://images.unsplash.com/photo-1533090161767-e6ffed986c88?w=400&h=400&fit=crop" },
-  original_display: { name: "清宫内景", rarity: "墨宝", img: "https://images.unsplash.com/photo-1523731407965-243ffcc142d2?w=400&h=400&fit=crop" }
+  ceramics: { 
+    name: "釉彩大瓶", 
+    rarity: "至宝", 
+    img: "assets/ceramics_main.jpg" 
+  },
+  clocks: { 
+    name: "铜镀金写字人钟", 
+    rarity: "孤品", 
+    img: "assets/clock_item.jpg" 
+  },
+  treasures: { 
+    name: "金瓯永固杯", 
+    rarity: "御用", 
+    img: "assets/gold_cup.jpg" 
+  },
+  furniture: { 
+    name: "紫檀木画屏", 
+    rarity: "典藏", 
+    img: "assets/furniture_01.jpg" 
+  },
+  architecture: { 
+    name: "太和殿脊兽", 
+    rarity: "传世", 
+    img: "assets/arch_beast.jpg" 
+  },
+  original_display: { 
+    name: "乾隆御笔匾额", 
+    rarity: "墨宝", 
+    img: "assets/original_view.jpg" 
+  }
 };
 
 function loadVisitedState() {
