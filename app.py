@@ -51,6 +51,38 @@ app.mount("/static", StaticFiles(directory=AUDIO_DIR), name="static")
 app.mount("/assets", StaticFiles(directory=ROOT / "assets"), name="assets")
 
 
+_stackchan_mcp_task: asyncio.Task | None = None
+
+
+def stackchan_mcp_enabled() -> bool:
+    flag = os.getenv("ENABLE_STACKCHAN_MCP_BRIDGE", "").strip().lower()
+    endpoint = os.getenv("XIAOZHI_MCP_ENDPOINT") or os.getenv("MCP_ENDPOINT")
+    return flag in {"1", "true", "yes", "on"} and bool(endpoint)
+
+
+@app.on_event("startup")
+async def start_stackchan_mcp_bridge() -> None:
+    global _stackchan_mcp_task
+    if not stackchan_mcp_enabled():
+        return
+    from xiaozhi_mcp_bridge import run_forever
+
+    _stackchan_mcp_task = asyncio.create_task(run_forever())
+
+
+@app.on_event("shutdown")
+async def stop_stackchan_mcp_bridge() -> None:
+    global _stackchan_mcp_task
+    if _stackchan_mcp_task is None:
+        return
+    _stackchan_mcp_task.cancel()
+    try:
+        await _stackchan_mcp_task
+    except asyncio.CancelledError:
+        pass
+    _stackchan_mcp_task = None
+
+
 API_KEY = (
     os.getenv("CULTURE_AGENT_DASHSCOPE_API_KEY")
     or os.getenv("DASHSCOPE_API_KEY")

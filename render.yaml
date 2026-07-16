@@ -14,3 +14,7 @@ services:
         value: zh-CN-YunxiNeural
       - key: CULTURE_AGENT_DASHSCOPE_API_KEY
         sync: false
+      - key: XIAOZHI_MCP_ENDPOINT
+        sync: false
+      - key: ENABLE_STACKCHAN_MCP_BRIDGE
+        value: true
