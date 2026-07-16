@@ -2369,6 +2369,8 @@ body {
   let transcript = "";
   let artifactOrder = [];
   let relationshipState = {};
+  let lastStackchanEventId = "";
+  let stackchanSyncInitialized = false;
 
   const $ = (id) => document.getElementById(id);
   const screens = ["gateScreen", "mapScreen", "deviceScreen", "galleryScreen", "detailScreen"];
@@ -2379,6 +2381,11 @@ body {
     screens.forEach((screenId) => $(screenId).classList.toggle("active", screenId === id));
     const guide = $("guideWidget");
     if (guide) guide.classList.toggle("active", id !== "gateScreen");
+  }
+
+  function activeScreenId() {
+    const active = document.querySelector(".screen.active");
+    return active?.id || "";
   }
 
   function setBusy(scope, busy, text) {
@@ -2981,6 +2988,63 @@ function renderRelatedArtifacts() {
     showScreen("detailScreen");
   }
 
+  function applyStackchanState(state) {
+    if (!state?.active || !state.event_id || state.event_id === lastStackchanEventId || !galleries.length) return;
+    lastStackchanEventId = state.event_id;
+    const gallery = galleries.find((item) => item.id === state.gallery_id);
+    if (!gallery) return;
+    const artifact = gallery.artifacts.find((item) => item.id === state.artifact_id) || gallery.artifacts[0];
+    const shouldOpenDetail = state.target_view === "detail" && artifact;
+
+    if (!activeGallery || activeGallery.id !== gallery.id) {
+      openGallery(gallery.id);
+    }
+    if (shouldOpenDetail) {
+      openDetail(artifact.id);
+    } else if (activeScreenId() === "detailScreen") {
+      showScreen("galleryScreen");
+    }
+
+    const scope = shouldOpenDetail ? "detail" : "gallery";
+    const output = scope === "detail" ? $("detailAiOutput") : $("galleryAiOutput");
+    const question = scope === "detail" ? $("detailQuestion") : $("galleryQuestion");
+    const persona = getArtifactPersona(artifact, gallery);
+    if (question && state.question) question.value = state.question;
+    if (output) output.innerText = `StackChan：${state.text || ""}`;
+    setAudioStatus(scope, "StackChan 已同步", "这段讲解来自实体设备语音触发。");
+    updateGuide(persona, {
+      state: "speaking",
+      line: state.text || "",
+      status: "StackChan 正在讲解"
+    });
+  }
+
+  async function pollStackchanState() {
+    if (!galleries.length) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/stackchan/state?t=${Date.now()}`, { cache: "no-store" });
+      if (!res.ok) return;
+      const state = await res.json();
+      if (!state?.active || !state.event_id) return;
+      if (!stackchanSyncInitialized) {
+        stackchanSyncInitialized = true;
+        const isFresh = state.created_at && Date.now() - state.created_at < 30000;
+        if (!isFresh) {
+          lastStackchanEventId = state.event_id;
+          return;
+        }
+      }
+      applyStackchanState(state);
+    } catch (err) {
+      // StackChan sync is optional; keep the museum UI usable if polling fails.
+    }
+  }
+
+  function startStackchanSync() {
+    pollStackchanState();
+    window.setInterval(pollStackchanState, 2000);
+  }
+
   async function ask(scope, mode = "chat") {
     if (!activeGallery) return;
     if (!activeArtifact) activeArtifact = activeGallery.artifacts[0];
@@ -3445,7 +3509,9 @@ function renderRelatedArtifacts() {
   loadRelationshipState();
   loadVisitedState();
   setupVoice();
-  loadPalace().catch(() => {
+  loadPalace().then(() => {
+    startStackchanSync();
+  }).catch(() => {
     $("mapOpening").innerText = "无法连接后端，请确认 app.py 已启动。";
   });
 </script>

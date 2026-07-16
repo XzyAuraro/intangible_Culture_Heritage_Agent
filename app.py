@@ -3,6 +3,7 @@ import json
 import math
 import os
 import re
+import time
 import uuid
 from pathlib import Path
 from typing import Any
@@ -21,6 +22,7 @@ AUDIO_DIR = ROOT / "static_audio"
 DATA_DIR = ROOT / "data"
 KNOWLEDGE_PATH = DATA_DIR / "canglang_pavilion_knowledge.json"
 PALACE_PATH = DATA_DIR / "palace_museum_demo.json"
+STACKCHAN_STATE_PATH = DATA_DIR / "stackchan_state.json"
 
 AUDIO_DIR.mkdir(exist_ok=True)
 DATA_DIR.mkdir(exist_ok=True)
@@ -94,6 +96,28 @@ client = OpenAI(
 )
 
 DEVICE_RELATIONSHIPS: dict[str, int] = {}
+
+
+def read_stackchan_state() -> dict[str, Any]:
+    if not STACKCHAN_STATE_PATH.exists():
+        return {"active": False}
+    try:
+        return json.loads(STACKCHAN_STATE_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {"active": False}
+
+
+def publish_stackchan_state(payload: dict[str, Any]) -> dict[str, Any]:
+    state = {
+        "active": True,
+        "event_id": uuid.uuid4().hex,
+        "created_at": int(time.time() * 1000),
+        **payload,
+    }
+    temp_path = STACKCHAN_STATE_PATH.with_suffix(".tmp")
+    temp_path.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
+    temp_path.replace(STACKCHAN_STATE_PATH)
+    return state
 
 
 DEFAULT_KNOWLEDGE: dict[str, Any] = {
@@ -538,6 +562,14 @@ async def museum():
 async def palace():
     data = load_palace()
     return data
+
+
+@app.get("/api/stackchan/state")
+async def stackchan_state():
+    return JSONResponse(
+        read_stackchan_state(),
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 @app.get("/api/palace/search")
