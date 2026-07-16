@@ -273,7 +273,117 @@
       border: 3px solid #fff0d4;
       box-shadow: 0 0 0 8px rgba(142, 47, 40, 0.18), 0 10px 24px rgba(0,0,0,0.28);
       animation: pinBreath 2.8s ease-in-out infinite;
+      position: relative;
+      z-index: 2;
     }
+
+    .map-pin {
+  --heat: 0.3;
+}
+
+.pin-heat {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 90px;
+  height: 90px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(
+    circle,
+    rgba(255, 60, 40, calc(0.35 + var(--heat) * 0.65)) 0%,
+    rgba(255, 140, 20, calc(0.25 + var(--heat) * 0.45)) 40%,
+    rgba(255, 140, 20, 0) 72%
+  );
+  transition: background 1.2s ease;
+  mix-blend-mode: normal;
+}
+
+.heat-legend-toggle {
+  position: absolute;
+  left: 28px;
+  bottom: 24px;
+  z-index: 6;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 248, 234, 0.9);
+  border: 1px solid rgba(99, 68, 44, 0.22);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(32, 24, 20, 0.18);
+  transition: transform 160ms ease, background 160ms ease;
+}
+
+.heat-legend-toggle:hover {
+  transform: scale(1.06);
+  background: rgba(255, 248, 234, 1);
+}
+
+.heat-icon {
+  font-size: 16px;
+  color: var(--red-deep);
+  line-height: 1;
+}
+
+.heat-legend-popup {
+  position: absolute;
+  bottom: 44px;
+  top: auto;
+  left: 0;
+  width: 220px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: rgba(255, 248, 234, 0.97);
+  border: 1px solid rgba(99, 68, 44, 0.18);
+  box-shadow: 0 14px 34px rgba(32, 24, 20, 0.22);
+  color: var(--red-deep);
+  font-size: 12px;
+  line-height: 1.6;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(6px);
+  transition: opacity 160ms ease, transform 160ms ease, visibility 160ms ease;
+  pointer-events: none;
+}
+
+.heat-legend-toggle:hover .heat-legend-popup,
+.heat-legend-toggle.open .heat-legend-popup {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.heat-legend-popup strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+.heat-legend-popup p {
+  margin: 0 0 10px;
+  color: var(--muted);
+}
+
+.heat-legend-popup .heat-bar {
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(255,140,20,0.35), rgba(255,40,0,0.85));
+  margin-bottom: 4px;
+}
+
+.heat-bar-labels {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 11px;
+}
 
     @keyframes pinBreath {
       0%, 100% { transform: scale(1); box-shadow: 0 0 0 7px rgba(142, 47, 40, 0.16), 0 10px 24px rgba(0,0,0,0.25); }
@@ -1405,6 +1515,13 @@ body {
   padding: 6px 10px;
   box-shadow: 0 4px 14px rgba(32, 24, 20, 0.15);
   font-family: inherit;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+#fontSizeControl.dragging {
+  cursor: grabbing;
+  opacity: 0.9;
 }
 
 #fontSizeControl button {
@@ -1470,6 +1587,259 @@ body {
   transform: translateX(-15%) translateY(-115%) rotate(-8deg);
   opacity: 0;
 }
+.route-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.route-path {
+  fill: none;
+  stroke: rgba(255, 243, 220, 0.85);
+  stroke-width: 0.6;
+  stroke-dasharray: 2.5 2.5;
+  stroke-linecap: round;
+  animation: routeDash 26s linear infinite;
+}
+
+.route-path.glow {
+  stroke: rgba(212, 160, 23, 0.3);
+  stroke-width: 2;
+  stroke-dasharray: none;
+  animation: none;
+}
+
+@keyframes routeDash {
+  to {
+    stroke-dashoffset: -400;
+  }
+}
+
+.ar-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 6, 4, 0.88);
+}
+
+.ar-overlay.active {
+  display: flex;
+}
+
+.ar-frame {
+  position: relative;
+  width: min(560px, 88vw);
+  height: min(560px, 70vh);
+  border-radius: 18px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 40%, rgba(212,160,23,0.08), transparent 60%),
+    linear-gradient(160deg, #1a120c, #2a1a12);
+}
+
+.ar-corner {
+  position: absolute;
+  width: 34px;
+  height: 34px;
+  border: 3px solid var(--gold);
+}
+
+.ar-corner.tl { top: 14px; left: 14px; border-right: none; border-bottom: none; }
+.ar-corner.tr { top: 14px; right: 14px; border-left: none; border-bottom: none; }
+.ar-corner.bl { bottom: 14px; left: 14px; border-right: none; border-top: none; }
+.ar-corner.br { bottom: 14px; right: 14px; border-left: none; border-top: none; }
+
+.ar-scanline {
+  position: absolute;
+  left: 6%;
+  right: 6%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  box-shadow: 0 0 12px rgba(212, 160, 23, 0.8);
+  animation: arScan 1.8s ease-in-out infinite;
+}
+
+@keyframes arScan {
+  0% { top: 12%; opacity: 0.3; }
+  50% { top: 85%; opacity: 1; }
+  100% { top: 12%; opacity: 0.3; }
+}
+
+.ar-status {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 24px;
+  text-align: center;
+  color: #f5d29a;
+  font-size: 13px;
+  letter-spacing: 1px;
+}
+
+.ar-result {
+  position: absolute;
+  inset: auto 20px 20px;
+  padding: 18px;
+  border-radius: 14px;
+  background: rgba(255, 248, 234, 0.96);
+  color: var(--red-deep);
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 260ms ease, transform 260ms ease;
+  pointer-events: none;
+}
+
+.ar-result.show {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.ar-result strong {
+  display: block;
+  font-size: 17px;
+  margin-bottom: 6px;
+}
+
+.ar-result p {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.ar-close {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 248, 234, 0.9);
+  color: var(--red-deep);
+  font-size: 20px;
+  border: none;
+  cursor: pointer;
+}
+
+.ar-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.visit-progress {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.visit-progress-track {
+  width: 140px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 248, 234, 0.28);
+  overflow: hidden;
+}
+
+.visit-progress-bar {
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--gold), #ffb347);
+  transition: width 400ms ease;
+}
+
+.visit-progress span {
+  font-size: 12px;
+  color: #f3e5cd;
+  white-space: nowrap;
+}
+
+.pin-dot.visited {
+  background: var(--gold);
+  border-color: #fff8ea;
+  box-shadow: 0 0 0 8px rgba(212, 160, 23, 0.22), 0 10px 24px rgba(0,0,0,0.28);
+}
+
+.pin-dot.visited::after {
+  content: "✓";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--red-deep);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.guide-badge {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--gold);
+  color: var(--red-deep);
+  font-size: 11px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--ivory);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+}
+
+.resume-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999; /* 确保在最顶层 */
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 6, 4, 0.72);
+  backdrop-filter: blur(4px);
+}
+.resume-dialog-overlay.active {
+  display: flex;
+}
+.resume-dialog {
+  width: min(400px, 88vw);
+  padding: 28px 26px;
+  border-radius: 20px;
+  background: #FFF8EA;
+  text-align: center;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+  border: 1px solid rgba(99, 68, 44, 0.18);
+}
+.resume-dialog strong {
+  display: block;
+  color: #8E2F28;
+  font-size: 18px;
+  margin-bottom: 12px;
+}
+.resume-dialog p {
+  color: #63442C;
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+.resume-dialog-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
 
 </style>
 </head>
@@ -1490,15 +1860,35 @@ body {
   <div class="map-bg"></div>
   <div class="map-topbar">
     <div class="map-title">
+        <div class="visit-progress">
+  <div class="visit-progress-track">
+    <div class="visit-progress-bar" id="visitProgressBar"></div>
+  </div>
+  <span id="visitProgressLabel">已参观 0/6 个展馆</span>
+</div>
       <div class="eyebrow">全屏导览地图</div>
       <h1 id="mapTitle">故宫虚拟展馆</h1>
       <p id="mapOpening">点击地图中的展馆入口，进入展馆内部。</p>
     </div>
     <div class="map-actions">
+     <button type="button" class="ghost-btn" id="arNavBtn">AR 导览</button>
       <button type="button" class="text-btn" id="mapDeviceBtn">讲解器模拟</button>
       <button type="button" class="text-btn" id="backGateBtn">退出</button>
     </div>
   </div>
+  <svg id="routeLayer" class="route-layer"></svg>
+     <div class="heat-legend-toggle" id="heatLegendToggle" aria-label="人流热度说明">
+  <span class="heat-icon">⚙</span>
+  <div class="heat-legend-popup">
+    <strong>人流热度示意</strong>
+    <p>颜色越深、范围越大，代表该展馆当前模拟的参观人数越多，仅作教学演示，非真实人流数据。</p>
+    <div class="heat-bar"></div>
+    <div class="heat-bar-labels">
+      <span>较少</span>
+      <span>较多</span>
+    </div>
+  </div>
+</div>
   <div id="pinLayer"></div>
   <div class="map-hint" id="routeNote">地图为教学 Demo 示意，不是精确测绘图。</div>
 </section>
@@ -1668,6 +2058,7 @@ body {
       </div>
       <div class="guide-hat"></div>
       <div class="guide-head" id="guideInitial">宫</div>
+       <div class="guide-badge" id="guideBadgePrimary"></div>
       <div class="guide-sleeve left"></div>
       <div class="guide-body"></div>
       <div class="guide-sleeve right"></div>
@@ -1679,6 +2070,7 @@ body {
       </div>
       <div class="guide-hat"></div>
       <div class="guide-head" id="guideInitialSecondary">礼</div>
+      <div class="guide-badge" id="guideBadgeSecondary"></div>
       <div class="guide-sleeve left"></div>
       <div class="guide-body"></div>
       <div class="guide-sleeve right"></div>
@@ -1690,6 +2082,35 @@ body {
     <div class="guide-status" id="guideStatus">待命</div>
   </div>
 </div>
+
+<div class="ar-overlay" id="arOverlay">
+  <div class="ar-frame">
+    <video id="arVideo" class="ar-video" autoplay muted playsinline></video>
+    <div class="ar-corner tl"></div>
+    <div class="ar-corner tr"></div>
+    <div class="ar-corner bl"></div>
+    <div class="ar-corner br"></div>
+    <div class="ar-scanline"></div>
+    <div class="ar-status" id="arStatus">正在识别周围建筑…</div>
+    <div class="ar-result" id="arResult">
+      <strong id="arResultTitle"></strong>
+      <p id="arResultDesc"></p>
+      <button type="button" class="primary-btn" id="arGoDetailBtn">进入展馆</button>
+    </div>
+  </div>
+  <button type="button" class="ar-close" id="arCloseBtn">×</button>
+</div>
+<div class="resume-dialog-overlay" id="resumeDialogOverlay">
+  <div class="resume-dialog">
+    <strong>是否继续上次的参观？</strong>
+    <p>检测到您上次有未完成的参观记录，选择“继续参观”会保留已解锁的展馆和关系进度，选择“重新开始”会清空所有记录。</p>
+    <div class="resume-dialog-actions">
+      <button type="button" class="ghost-btn" id="resumeNoBtn">重新开始</button>
+      <button type="button" class="primary-btn" id="resumeYesBtn">继续参观</button>
+    </div>
+  </div>
+</div>
+
 
 <script>
   const apiParam = new URLSearchParams(window.location.search).get("api");
@@ -1771,6 +2192,9 @@ body {
     $("mapOpening").innerText = palace.museum.opening;
     $("routeNote").innerText = palace.museum.route_note;
     renderPins();
+    renderRoute();
+    updateVisitProgress();
+    updatePinVisitedState();
     routeInitialView();
   }
 
@@ -1798,18 +2222,54 @@ body {
   }
 
   function renderPins() {
-    const layer = $("pinLayer");
-    layer.innerHTML = "";
-    galleries.forEach((gallery) => {
-      const pin = document.createElement("button");
-      pin.className = "map-pin";
-      pin.style.setProperty("--x", gallery.x);
-      pin.style.setProperty("--y", gallery.y);
-      pin.innerHTML = `<span class="pin-dot"></span><span class="pin-label">${gallery.name}<span>${gallery.zone}</span></span>`;
-      pin.onclick = () => openGallery(gallery.id);
-      layer.appendChild(pin);
-    });
-  }
+  const layer = $("pinLayer");
+  layer.innerHTML = "";
+  galleries.forEach((gallery) => {
+    const pin = document.createElement("button");
+    pin.className = "map-pin";
+    pin.style.setProperty("--x", gallery.x);
+    pin.style.setProperty("--y", gallery.y);
+    pin.innerHTML = `<span class="pin-heat" id="heat-${gallery.id}"></span><span class="pin-dot" id="pindot-${gallery.id}"></span><span class="pin-label">${gallery.name}<span>${gallery.zone}</span></span>`;
+    pin.onclick = () => openGallery(gallery.id);
+    layer.appendChild(pin);
+  });
+  updateHeatLevels();
+}
+
+function computeHeatLevel(gallery) {
+  const hour = new Date().getHours();
+  let baseLevel = 0.55;
+  if (hour >= 10 && hour < 12) baseLevel = 0.9;
+  else if (hour >= 14 && hour < 16) baseLevel = 0.95;
+  else if (hour >= 12 && hour < 14) baseLevel = 0.75;
+  else if (hour < 9 || hour >= 17) baseLevel = 0.4;
+  const wobble = (Math.sin(Date.now() / 9000 + gallery.x) + 1) / 2 * 0.2;
+  return Math.min(1, Math.max(0.35, baseLevel + wobble));
+}
+
+function updateHeatLevels() {
+  galleries.forEach((gallery) => {
+    const el = document.getElementById(`heat-${gallery.id}`);
+    if (!el) return;
+    const level = computeHeatLevel(gallery);
+    el.parentElement.style.setProperty("--heat", level.toFixed(2));
+  });
+}
+
+setInterval(updateHeatLevels, 4000);
+
+  function renderRoute() {
+  const svg = $("routeLayer");
+  if (!svg || !galleries.length) return;
+  const viewBox = "0 0 100 100";
+  svg.setAttribute("viewBox", viewBox);
+  svg.setAttribute("preserveAspectRatio", "none");
+  const points = galleries.map((g) => `${g.x},${g.y}`).join(" ");
+  svg.innerHTML = `
+    <polyline class="route-path glow" points="${points}"></polyline>
+    <polyline class="route-path" points="${points}"></polyline>
+  `;
+}
 
   function renderDeviceOptions() {
     const gallerySelect = $("deviceGallerySelect");
@@ -1890,6 +2350,18 @@ body {
     return "#365f54";
   }
 
+  function personaIcon(persona) {
+  const name = persona?.name || "";
+  if (name.includes("乾隆") || name.includes("雍正") || name.includes("皇帝")) return "璽";
+  if (name.includes("瓷") || name.includes("陶") || name.includes("窑")) return "瓷";
+  if (name.includes("钟") || name.includes("通事") || name.includes("造办处")) return "钟";
+  if (name.includes("礼") || name.includes("起居") || name.includes("典章")) return "礼";
+  if (name.includes("匠") || name.includes("雷") || name.includes("营造")) return "匠";
+  if (name.includes("宝") || name.includes("藏") || name.includes("鉴")) return "宝";
+  if (name.includes("陈设") || name.includes("家具")) return "陈";
+  return "宫";
+}
+
   function clipGuideLine(text, max = 54) {
     if (!text) return "";
     const compact = text.replace(/\s+/g, " ").trim();
@@ -1953,6 +2425,10 @@ body {
     guide.style.setProperty("--guide-accent-secondary", personaAccent(partner));
     $("guideInitial").innerText = primary.name.slice(0, 1);
     $("guideInitialSecondary").innerText = partner.name.slice(0, 1);
+    const badgePrimary = $("guideBadgePrimary");
+  const badgeSecondary = $("guideBadgeSecondary");
+  if (badgePrimary) badgePrimary.innerText = personaIcon(primary);
+  if (badgeSecondary) badgeSecondary.innerText = personaIcon(partner);
     const dialogueLines = options.dialogueLines || parseDialogueForGuides(options.sceneText, [primary, partner]);
     const primaryLine = dialogueLines[primary.name] || primary.voice || "我先从文物主人的视角说起。";
     const partnerLine = dialogueLines[partner.name] || partner.voice || "我补充工艺、制度或陈设角度。";
@@ -2004,6 +2480,61 @@ body {
     return relationshipState[key];
   }
 
+let visitedGalleries = {};
+
+function loadVisitedState() {
+  try {
+    visitedGalleries = JSON.parse(localStorage.getItem("palaceAgentVisited") || "{}");
+  } catch (err) {
+    visitedGalleries = {};
+  }
+}
+
+function hasPreviousProgress() {
+  const visitedRaw = localStorage.getItem("palaceAgentVisited");
+  const relationshipRaw = localStorage.getItem("palaceAgentRelationship");
+  const hasVisited = visitedRaw && Object.keys(JSON.parse(visitedRaw)).length > 0;
+  const hasRelationship = relationshipRaw && Object.keys(JSON.parse(relationshipRaw)).length > 0;
+  return Boolean(hasVisited || hasRelationship);
+}
+
+function clearAllProgress() {
+  localStorage.removeItem("palaceAgentVisited");
+  localStorage.removeItem("palaceAgentRelationship");
+  visitedGalleries = {};
+  relationshipState = {};
+}
+
+function markGalleryVisited(galleryId) {
+  if (visitedGalleries[galleryId]) return;
+  visitedGalleries[galleryId] = true;
+  try {
+    localStorage.setItem("palaceAgentVisited", JSON.stringify(visitedGalleries));
+  } catch (err) {
+    // 忽略存储异常
+  }
+  updateVisitProgress();
+  updatePinVisitedState();
+}
+
+function updateVisitProgress() {
+  const bar = $("visitProgressBar");
+  const label = $("visitProgressLabel");
+  if (!bar || !label || !galleries.length) return;
+  const visitedCount = galleries.filter((g) => visitedGalleries[g.id]).length;
+  const percent = Math.round((visitedCount / galleries.length) * 100);
+  bar.style.width = `${percent}%`;
+  label.innerText = `已参观 ${visitedCount}/${galleries.length} 个展馆`;
+}
+
+function updatePinVisitedState() {
+  galleries.forEach((gallery) => {
+    const dot = document.getElementById(`pindot-${gallery.id}`);
+    if (dot) dot.classList.toggle("visited", Boolean(visitedGalleries[gallery.id]));
+  });
+}
+
+
   function updateRelationshipView(persona, artifact = activeArtifact) {
     const score = getRelationshipScore(persona, artifact);
     const stage = relationshipStage(score);
@@ -2035,6 +2566,7 @@ body {
     clearSources("gallery");
     $("galleryAudio").removeAttribute("src");
     setAudioStatus("gallery", "", "", false);
+    markGalleryVisited(activeGallery.id);
     renderArtifacts();
     showScreen("galleryScreen");
   }
@@ -2571,6 +3103,7 @@ body {
   };
 
   loadRelationshipState();
+  loadVisitedState();
   setupVoice();
   loadPalace().catch(() => {
     $("mapOpening").innerText = "无法连接后端，请确认 app.py 已启动。";
@@ -2615,7 +3148,212 @@ body {
   document.getElementById('fontReset').addEventListener('click', function () {
     currentScale = applyScale(1);
   });
+    // 拖拽功能
+  var panel = document.getElementById('fontSizeControl');
+  var POS_KEY = 'palaceAgentFontPanelPos';
+  var dragging = false;
+  var startX = 0, startY = 0, startLeft = 0, startTop = 0;
+
+  function applyPosition(left, top) {
+    var maxLeft = window.innerWidth - panel.offsetWidth - 4;
+    var maxTop = window.innerHeight - panel.offsetHeight - 4;
+    left = Math.min(Math.max(4, left), Math.max(4, maxLeft));
+    top = Math.min(Math.max(4, top), Math.max(4, maxTop));
+    panel.style.left = left + 'px';
+    panel.style.top = top + 'px';
+    panel.style.bottom = 'auto';
+    localStorage.setItem(POS_KEY, JSON.stringify({ left: left, top: top }));
+  }
+
+  var savedPos = null;
+  try {
+    savedPos = JSON.parse(localStorage.getItem(POS_KEY));
+  } catch (err) {
+    savedPos = null;
+  }
+  if (savedPos && typeof savedPos.left === 'number') {
+    applyPosition(savedPos.left, savedPos.top);
+  }
+
+  function onPointerDown(event) {
+    if (event.target.closest('button')) return; // 点按钮不触发拖拽
+    dragging = true;
+    panel.classList.add('dragging');
+    var rect = panel.getBoundingClientRect();
+    startX = event.clientX;
+    startY = event.clientY;
+    startLeft = rect.left;
+    startTop = rect.top;
+    event.preventDefault();
+  }
+
+  function onPointerMove(event) {
+    if (!dragging) return;
+    var deltaX = event.clientX - startX;
+    var deltaY = event.clientY - startY;
+    applyPosition(startLeft + deltaX, startTop + deltaY);
+  }
+
+  function onPointerUp() {
+    dragging = false;
+    panel.classList.remove('dragging');
+  }
+
+  panel.addEventListener('pointerdown', onPointerDown);
+  window.addEventListener('pointermove', onPointerMove);
+  window.addEventListener('pointerup', onPointerUp);
+
+  const heatToggle = document.getElementById('heatLegendToggle');
+if (heatToggle) {
+  heatToggle.addEventListener('click', function (event) {
+    event.stopPropagation();
+    heatToggle.classList.toggle('open');
+  });
+  document.addEventListener('click', function (event) {
+    if (!heatToggle.contains(event.target)) {
+      heatToggle.classList.remove('open');
+    }
+  });
+}
 })();
+
+let arStream = null;
+
+async function startArCamera() {
+  const video = $("arVideo");
+  try {
+    arStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "environment" }
+    });
+    video.srcObject = arStream;
+    await video.play();
+    return true;
+  } catch (err) {
+    return false;
+  }
+}
+
+function stopArCamera() {
+  if (arStream) {
+    arStream.getTracks().forEach((track) => track.stop());
+    arStream = null;
+  }
+}
+
+async function openArOverlay() {
+  const overlay = $("arOverlay");
+  const status = $("arStatus");
+  const result = $("arResult");
+  if (!overlay) return;
+  result.classList.remove("show");
+  status.style.display = "block";
+  status.innerText = "正在请求摄像头权限…";
+  overlay.classList.add("active");
+
+  const cameraOk = await startArCamera();
+  if (!cameraOk) {
+    status.innerText = "未获得摄像头权限，已切换为模拟演示模式";
+  } else {
+    status.innerText = "正在识别周围建筑…";
+  }
+
+  const gallery = activeGallery || galleries[0];
+  setTimeout(() => {
+    status.innerText = `已识别：${gallery.name}`;
+  }, 1200);
+
+  setTimeout(() => {
+    status.style.display = "none";
+    $("arResultTitle").innerText = gallery.name;
+    $("arResultDesc").innerText = gallery.summary;
+    result.classList.add("show");
+  }, 2200);
+}
+
+function closeArOverlay() {
+  $("arOverlay").classList.remove("active");
+  stopArCamera();
+}
+
+const arNavBtn = $("arNavBtn");
+if (arNavBtn) {
+  arNavBtn.onclick = (event) => {
+    event.preventDefault();
+    openArOverlay();
+  };
+}
+
+const arCloseBtn = $("arCloseBtn");
+if (arCloseBtn) {
+  arCloseBtn.onclick = (event) => {
+    event.preventDefault();
+    closeArOverlay();
+  };
+}
+
+const arGoDetailBtn = $("arGoDetailBtn");
+if (arGoDetailBtn) {
+  arGoDetailBtn.onclick = (event) => {
+    event.preventDefault();
+    closeArOverlay();
+    const gallery = activeGallery || galleries[0];
+    openGallery(gallery.id);
+  };
+}
+
+(function() {
+  const get = (id) => document.getElementById(id);
+
+  // 检查是否有历史记录
+  function hasHistory() {
+    const v = localStorage.getItem("palaceAgentVisited");
+    const r = localStorage.getItem("palaceAgentRelationship");
+    try {
+      if (v && Object.keys(JSON.parse(v)).length > 0) return true;
+      if (r && Object.keys(JSON.parse(r)).length > 0) return true;
+    } catch(e) {}
+    return false;
+  }
+
+  // 逻辑绑定
+  window.addEventListener('load', () => {
+    const enterBtn = get("enterBtn");
+    if (enterBtn) {
+      enterBtn.onclick = (e) => {
+        e.preventDefault();
+        if (hasHistory()) {
+          get("resumeDialogOverlay").classList.add("active");
+        } else {
+          showScreen("mapScreen");
+        }
+      };
+    }
+
+    if (get("resumeYesBtn")) {
+      get("resumeYesBtn").onclick = () => {
+        get("resumeDialogOverlay").classList.remove("active");
+        showScreen("mapScreen");
+      };
+    }
+
+    if (get("resumeNoBtn")) {
+      get("resumeNoBtn").onclick = () => {
+        localStorage.removeItem("palaceAgentVisited");
+        localStorage.removeItem("palaceAgentRelationship");
+        // 刷新页面变量
+        if (typeof visitedGalleries !== 'undefined') visitedGalleries = {};
+        if (typeof relationshipState !== 'undefined') relationshipState = {};
+        // 刷新UI
+        if (typeof updateVisitProgress === "function") updateVisitProgress();
+        if (typeof updatePinVisitedState === "function") updatePinVisitedState();
+        
+        get("resumeDialogOverlay").classList.remove("active");
+        showScreen("mapScreen");
+      };
+    }
+  });
+})();
+
 </script>
 
 </body>
