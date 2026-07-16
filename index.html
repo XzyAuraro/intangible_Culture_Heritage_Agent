@@ -997,21 +997,47 @@
       color: var(--red-deep);
     }
 
-    .guide-widget {
-      position: fixed;
-      right: clamp(14px, 2.4vw, 34px);
-      bottom: clamp(14px, 2.4vw, 30px);
-      z-index: 40;
-      width: min(330px, calc(100vw - 28px));
-      display: grid;
-      grid-template-columns: 86px minmax(0, 1fr);
-      gap: 12px;
-      align-items: end;
-      pointer-events: none;
-      opacity: 0;
-      transform: translateY(14px);
-      transition: opacity 180ms ease, transform 180ms ease;
-    }
+    /* 修改第 1000 行左右的 .guide-widget */
+.guide-widget {
+  position: fixed;
+  right: clamp(14px, 2.4vw, 34px);
+  bottom: clamp(14px, 2.4vw, 30px);
+  z-index: 200; /* 提高层级，确保在最前 */
+  width: min(360px, calc(100vw - 28px)); /* 稍微加宽一点 */
+  display: flex; /* 改为 flex 布局更灵活 */
+  align-items: flex-end; /* 底部对齐 */
+  gap: 8px;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(14px);
+  transition: all 0.3s ease;
+}
+
+/* 修正小人的容器，确保它不占气泡的空间 */
+.guide-stage {
+  flex-shrink: 0;
+  width: 70px; /* 稍微缩小立绘占用的宽度 */
+  min-height: 100px;
+  display: flex;
+  align-items: flex-end;
+  position: relative;
+  z-index: 2;
+}
+
+/* 修正气泡，增加一个左侧的内边距或边距，彻底避开小人 */
+.guide-bubble {
+  flex-grow: 1;
+  pointer-events: auto;
+  padding: 14px 15px;
+  border-radius: 18px 18px 18px 2px; /* 调整圆角，让气泡尾巴指向小人 */
+  background: rgba(255, 252, 245, 0.96);
+  border: 1px solid rgba(142, 47, 40, 0.15);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  backdrop-filter: blur(12px);
+  margin-bottom: 10px; /* 抬高一点，防止贴地 */
+  border-radius: 18px !important; /* 改成全圆角，这样无论在哪边都好看 */
+  transition: border-radius 0.3s;
+}
 
     .guide-widget.active {
       opacity: 1;
@@ -1457,38 +1483,55 @@
       .gate-panel {
         transform: none;
       }
+            /* --- 手机端布局彻底重构 --- */
       .guide-widget {
-        grid-template-columns: 60px minmax(0, 1fr);
-        width: calc(100vw - 24px);
-        right: 12px;
-        bottom: 12px;
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: flex-end !important;
+        width: calc(100vw - 24px) !important;
+        right: 12px !important;
+        bottom: 12px !important;
+        gap: 8px !important;
+        cursor: grab; /* 鼠标悬停显示抓取手势 */
+        user-select: none; /* 防止拖拽时意外选中文字 */
+        touch-action: none; /* 优化移动端触摸体验 */
       }
+
+      .guide-widget:active {
+      cursor: grabbing; /* 按下时显示抓取中 */
+    }
+      
       .guide-widget.dual {
-        grid-template-columns: 1fr;
+        flex-direction: column !important; /* 双人模式改为上下排列，防止横向太挤 */
+        align-items: center !important;
       }
+
       .guide-stage {
-        width: 60px;
+        width: 50px !important; /* 缩小头像宽度 */
+        min-height: 80px !important;
+        flex-shrink: 0 !important;
+        display: flex !important;
+        align-items: flex-end !important;
       }
+
       .guide-widget.dual .guide-stage {
-        width: 100%;
-        min-height: 172px;
-        gap: 52px;
+        width: 100% !important;
+        min-height: 140px !important;
+        justify-content: center !important;
+        gap: 30px !important;
       }
+
       .guide-figure {
-        width: 60px;
-        height: 94px;
-        transform: scale(.72);
-        transform-origin: bottom left;
+        width: 100% !important;
+        height: auto !important;
+        transform: scale(0.65) !important; /* 进一步缩小立绘 */
+        transform-origin: bottom center !important;
       }
+
       .guide-widget.dual .guide-figure {
-        transform: scale(.7);
+        transform: scale(0.6) !important;
       }
-      .guide-character-bubble {
-        width: min(42vw, 158px);
-        min-height: 76px;
-        bottom: 106px;
-        padding: 10px 11px;
-      }
+
       .guide-character-bubble strong {
         font-size: 12px;
       }
@@ -3715,6 +3758,81 @@ if ('serviceWorker' in navigator) {
       .catch(err => console.log('PWA 注册失败', err));
   });
 }
+
+function setupDraggableGuide() {
+  const guide = document.getElementById('guideWidget');
+  if (!guide) return;
+
+  let isDragging = false;
+  let startX, startY, initialX, initialY;
+
+  // 鼠标/触摸按下
+  const onStart = (e) => {
+    isDragging = true;
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    
+    startX = clientX;
+    startY = clientY;
+    
+    // 获取当前位置
+    const rect = guide.getBoundingClientRect();
+    initialX = rect.left;
+    initialY = rect.top;
+    
+    guide.style.transition = 'none'; // 拖拽时关闭动画，防止延迟
+    guide.style.right = 'auto'; // 取消原有的定位限制
+    guide.style.bottom = 'auto';
+  };
+
+  // 移动中
+  const onMove = (e) => {
+    if (!isDragging) return;
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+    const dx = clientX - startX;
+    const dy = clientY - startY;
+
+    guide.style.left = (initialX + dx) + 'px';
+    guide.style.top = (initialY + dy) + 'px';
+  };
+
+  // 松手吸附
+  const onEnd = () => {
+    if (!isDragging) return;
+    isDragging = false;
+    
+    guide.style.transition = 'all 0.5s cubic-bezier(0.19, 1, 0.22, 1)'; // 开启平滑吸附动画
+    
+    const centerX = window.innerWidth / 2;
+    const rect = guide.getBoundingClientRect();
+    const currentX = rect.left + rect.width / 2;
+
+    // 自动吸附到最近的侧边
+    if (currentX < centerX) {
+      guide.style.left = '14px';
+      // 如果吸附到左边，我们把布局反转一下，让气泡在右边
+      guide.style.flexDirection = 'row';
+    } else {
+      guide.style.left = (window.innerWidth - rect.width - 14) + 'px';
+      // 如果吸附到右边，保持原样
+      guide.style.flexDirection = 'row';
+    }
+  };
+
+  // 绑定事件（兼容 PC 和 手机）
+  guide.addEventListener('mousedown', onStart);
+  window.addEventListener('mousemove', onMove);
+  window.addEventListener('mouseup', onEnd);
+  
+  guide.addEventListener('touchstart', onStart, { passive: false });
+  window.addEventListener('touchmove', onMove, { passive: false });
+  window.addEventListener('touchend', onEnd);
+}
+
+// 确保在页面加载后启动
+window.addEventListener('load', setupDraggableGuide);
 
 </script>
 
