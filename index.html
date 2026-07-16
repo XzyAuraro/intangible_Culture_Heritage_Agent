@@ -3,6 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#8E2F28">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="https://loremflickr.com/192/192/palace,china">
+
   <title>故宫虚拟展馆 Agent</title>
   <style>
     :root {
@@ -1887,6 +1893,152 @@ body {
   font-size: 12px;
 }
 
+.nft-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 6, 4, 0.92);
+  backdrop-filter: blur(10px);
+}
+.nft-overlay.active { display: flex; animation: fadeIn 0.5s ease; }
+
+.nft-card {
+  position: relative;
+  width: 320px;
+  padding: 30px;
+  background: linear-gradient(135deg, #2c1e1a, #1a120c);
+  border: 2px solid #d4a017;
+  border-radius: 20px;
+  text-align: center;
+  color: #f5d29a;
+  box-shadow: 0 0 50px rgba(212, 160, 23, 0.3);
+  overflow: hidden;
+}
+
+.nft-light {
+  position: absolute;
+  top: -50%; left: -50%; width: 200%; height: 200%;
+  background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+  transform: rotate(45deg);
+  animation: shine 3s infinite;
+}
+
+@keyframes shine {
+  0% { transform: translateX(-100%) rotate(45deg); }
+  100% { transform: translateX(100%) rotate(45deg); }
+}
+
+.nft-tag {
+  position: absolute;
+  top: 15px; right: 15px;
+  background: #d4a017;
+  color: #1a120c;
+  padding: 2px 10px;
+  font-size: 11px;
+  font-weight: 900;
+  border-radius: 4px;
+}
+
+.nft-img {
+  width: 100%;
+  height: 240px; /* 稍微调高一点，比例更协调 */
+  object-fit: contain; /* 核心：保证图片完整显示，不拉伸 */
+  margin: 15px 0;
+  display: block;
+  /* 增加一个深色渐变底衬，让图片“浮”在上面的感觉 */
+  background: radial-gradient(circle, rgba(212, 160, 23, 0.1) 0%, rgba(0,0,0,0.3) 100%);
+  border: 1px dashed rgba(212, 160, 23, 0.3); /* 换成虚线边框，更有证书质感 */
+  border-radius: 8px;
+}
+
+/* 增加一个加载失败的兜底样式 */
+.nft-img:not([src]), .nft-img[src=""] {
+  visibility: hidden;
+}
+
+.nft-card {
+  position: relative;
+  width: 340px; /* 稍微加宽一点 */
+  padding: 35px 25px;
+  background: #1a120c; /* 纯深色背景，衬托金色 */
+  border: 2px solid #d4a017;
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: 0 0 60px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(212, 160, 23, 0.1);
+}
+
+.nft-card h2 {
+  font-family: "STKaiti", "KaiTi", serif; /* 使用楷体，更有古风感 */
+  font-size: 24px;
+  color: #f5d29a;
+  margin: 15px 0 5px;
+}
+
+.nft-card p { font-size: 12px; opacity: 0.7; margin-bottom: 20px; }
+.nft-info {
+  display: flex; justify-content: space-between;
+  border-top: 1px solid rgba(212, 160, 23, 0.2);
+  padding-top: 15px; font-size: 11px; font-family: monospace;
+}
+
+/* 当按钮被禁用（生成中）时的样式 */
+#saveNfBtn:disabled {
+  background: #63442c;
+  cursor: wait;
+}
+
+/* 纯净海报视图微调 */
+@media print {
+  body * { visibility: hidden; }
+  #nftCard, #nftCard * { visibility: visible; }
+  #nftCard { position: absolute; left: 0; top: 0; width: 100%; }
+  #saveNfBtn, .nft-close { display: none !important; }
+}
+
+/* 定义波纹扩散动画 */
+@keyframes head-pulse {
+  0% { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
+/* 基础头像容器增加定位参考 */
+.guide-head {
+  position: relative;
+  z-index: 5;
+}
+
+/* 当父级拥有 .speaking 类名时，触发波纹 */
+.guide-figure.speaking .guide-head::after,
+.guide-figure.speaking .guide-head::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border: 2px solid var(--gold);
+  border-radius: 50%;
+  z-index: -1;
+  animation: head-pulse 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+}
+
+/* 第二圈波纹延迟一点，更有层次感 */
+.guide-figure.speaking .guide-head::after {
+  animation-delay: 1s;
+}
+
+/* 思考状态时的呼吸灯效果 */
+.guide-figure.thinking .guide-head {
+  box-shadow: 0 0 15px var(--gold);
+  transition: box-shadow 0.5s ease-in-out;
+  animation: head-glow 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes head-glow {
+  from { box-shadow: 0 0 5px var(--gold); }
+  to { box-shadow: 0 0 20px var(--gold); }
+}
+
 </style>
 </head>
 <body>
@@ -2529,6 +2681,15 @@ setInterval(updateHeatLevels, 4000);
 
 let visitedGalleries = {};
 
+const collectionData = {
+  architecture: { name: "故宫红墙", rarity: "传世", img: "https://images.unsplash.com/photo-1599571234909-29ed5d1321d6?w=400&h=400&fit=crop" },
+  clocks: { name: "西洋钟表", rarity: "孤品", img: "https://images.unsplash.com/photo-1508057198894-247b23fe5ade?w=400&h=400&fit=crop" },
+  treasures: { name: "金器宝物", rarity: "御用", img: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=400&h=400&fit=crop" },
+  ceramics: { name: "青花瓷器", rarity: "至宝", img: "https://images.unsplash.com/photo-1610701596007-11502861dcfa?w=400&h=400&fit=crop" },
+  furniture: { name: "红木家具", rarity: "典藏", img: "https://images.unsplash.com/photo-1533090161767-e6ffed986c88?w=400&h=400&fit=crop" },
+  original_display: { name: "清宫内景", rarity: "墨宝", img: "https://images.unsplash.com/photo-1523731407965-243ffcc142d2?w=400&h=400&fit=crop" }
+};
+
 function loadVisitedState() {
   try {
     visitedGalleries = JSON.parse(localStorage.getItem("palaceAgentVisited") || "{}");
@@ -2552,6 +2713,17 @@ function clearAllProgress() {
   relationshipState = {};
 }
 
+function showNftPopup(galleryId) {
+  const data = collectionData[galleryId];
+  if (!data) return;
+  
+  $("nftImg").src = data.img;
+  $("nftTitle").innerText = data.name;
+  $("nftTag").innerText = data.rarity;
+  $("nftDate").innerText = new Date().toLocaleDateString();
+  $("nftOverlay").classList.add("active");
+}
+
 function markGalleryVisited(galleryId) {
   if (visitedGalleries[galleryId]) return;
   visitedGalleries[galleryId] = true;
@@ -2562,6 +2734,8 @@ function markGalleryVisited(galleryId) {
   }
   updateVisitProgress();
   updatePinVisitedState();
+
+  setTimeout(() => showNftPopup(galleryId), 1000);
 }
 
 function updateVisitProgress() {
@@ -3216,6 +3390,22 @@ function renderRelatedArtifacts() {
   <button id="fontReset" aria-label="重置字体">重置</button>
 </div>
 
+<div class="nft-overlay" id="nftOverlay">
+  <div class="nft-card" id="nftCard">
+    <div class="nft-light"></div>
+    <div class="nft-tag" id="nftTag">传世</div>
+    <img src="" class="nft-img" id="nftImg">
+    <h2 id="nftTitle">数字藏品名称</h2>
+    <p>—— 故宫数字馆藏认证 ——</p>
+    <div class="nft-info">
+      <span id="nftDate">2026.07.16</span>
+      <span>编号 #8888</span>
+    </div>
+    <button class="primary-btn" id="saveNfBtn">保存藏品海报</button>
+  </div>
+  <button class="nft-close" onclick="$('nftOverlay').classList.remove('active')">×</button>
+</div>
+
 <script>
 (function () {
   var root = document.documentElement;
@@ -3452,6 +3642,55 @@ if (arGoDetailBtn) {
     }
   });
 })();
+
+function setupNftActions() {
+  const saveBtn = $("saveNfBtn");
+  if (!saveBtn) return;
+
+  saveBtn.onclick = (e) => {
+    e.preventDefault();
+    
+    // 1. 改变按钮文字，增加仪式感
+    const originalText = saveBtn.innerText;
+    saveBtn.innerText = "正在认证并生成海报...";
+    saveBtn.style.opacity = "0.7";
+    saveBtn.disabled = true;
+
+    // 2. 模拟生成过程，1秒后弹出提示
+    setTimeout(() => {
+      // 恢复按钮
+      saveBtn.innerText = originalText;
+      saveBtn.style.opacity = "1";
+      saveBtn.disabled = false;
+
+      // 3. 核心交互：引导用户保存
+      // 在移动端，最好的体验是引导长按；在PC端，我们可以利用打印预览另存为PDF
+      if (confirm("藏品认证成功！\n\n由于浏览器安全限制，请在接下来的界面中：\n1. 手机用户：直接截屏保存至相册\n2. 电脑用户：右键另存为图片\n\n是否现在开启保存视图？")) {
+        // 暂时隐藏掉不需要出现在海报里的元素
+        $("saveNfBtn").style.display = "none";
+        document.querySelector(".nft-close").style.display = "none";
+        
+        // 提示用户截图
+        alert("现在是纯净视图，请截图保存。点击确定恢复界面。");
+        
+        // 恢复元素
+        $("saveNfBtn").style.display = "inline-block";
+        document.querySelector(".nft-close").style.display = "block";
+      }
+    }, 1000);
+  };
+}
+
+// 确保在页面加载时初始化
+window.addEventListener('load', setupNftActions);
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(reg => console.log('PWA 离线管家已就位'))
+      .catch(err => console.log('PWA 注册失败', err));
+  });
+}
 
 </script>
 
