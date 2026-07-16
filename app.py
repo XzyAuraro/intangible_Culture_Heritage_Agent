@@ -570,6 +570,16 @@ async def index_page():
     return FileResponse(ROOT / "index.html")
 
 
+@app.get("/sw.js")
+async def service_worker():
+    return FileResponse(ROOT / "sw.js", media_type="application/javascript")
+
+
+@app.get("/manifest.json")
+async def manifest():
+    return FileResponse(ROOT / "manifest.json", media_type="application/manifest+json")
+
+
 @app.get("/api/museum")
 async def museum():
     knowledge = load_knowledge()
