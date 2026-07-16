@@ -23,6 +23,7 @@ DATA_DIR = ROOT / "data"
 KNOWLEDGE_PATH = DATA_DIR / "canglang_pavilion_knowledge.json"
 PALACE_PATH = DATA_DIR / "palace_museum_demo.json"
 STACKCHAN_STATE_PATH = DATA_DIR / "stackchan_state.json"
+WEB_STATE_PATH = DATA_DIR / "web_state.json"
 
 AUDIO_DIR.mkdir(exist_ok=True)
 DATA_DIR.mkdir(exist_ok=True)
@@ -117,6 +118,28 @@ def publish_stackchan_state(payload: dict[str, Any]) -> dict[str, Any]:
     temp_path = STACKCHAN_STATE_PATH.with_suffix(".tmp")
     temp_path.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
     temp_path.replace(STACKCHAN_STATE_PATH)
+    return state
+
+
+def read_web_state() -> dict[str, Any]:
+    if not WEB_STATE_PATH.exists():
+        return {"active": False}
+    try:
+        return json.loads(WEB_STATE_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {"active": False}
+
+
+def publish_web_state(payload: dict[str, Any]) -> dict[str, Any]:
+    state = {
+        "active": True,
+        "event_id": uuid.uuid4().hex,
+        "updated_at": int(time.time() * 1000),
+        **payload,
+    }
+    temp_path = WEB_STATE_PATH.with_suffix(".tmp")
+    temp_path.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
+    temp_path.replace(WEB_STATE_PATH)
     return state
 
 
@@ -525,6 +548,13 @@ class DeviceChatRequest(BaseModel):
     with_audio: bool = True
 
 
+class WebStateRequest(BaseModel):
+    gallery_id: str
+    artifact_id: str | None = None
+    view: str = "gallery"
+    source: str = "web"
+
+
 @app.get("/api/health")
 async def health():
     return {"status": "ok", "has_api_key": bool(API_KEY)}
@@ -570,6 +600,32 @@ async def stackchan_state():
         read_stackchan_state(),
         headers={"Cache-Control": "no-store"},
     )
+
+
+@app.get("/api/web/state")
+async def web_state():
+    return JSONResponse(
+        read_web_state(),
+        headers={"Cache-Control": "no-store"},
+    )
+
+
+@app.post("/api/web/state")
+async def update_web_state(payload: WebStateRequest):
+    gallery = find_gallery(payload.gallery_id)
+    artifact = find_artifact(gallery, payload.artifact_id)
+    view = "detail" if payload.view == "detail" else "gallery"
+    state = publish_web_state(
+        {
+            "source": payload.source,
+            "view": view,
+            "gallery_id": gallery["id"],
+            "gallery_name": gallery["name"],
+            "artifact_id": artifact["id"],
+            "artifact_title": artifact["title"],
+        }
+    )
+    return state
 
 
 @app.get("/api/palace/search")

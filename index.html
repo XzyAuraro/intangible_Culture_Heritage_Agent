@@ -2388,6 +2388,23 @@ body {
     return active?.id || "";
   }
 
+  function publishWebState(view = "gallery") {
+    if (!activeGallery || !activeArtifact) return;
+    fetch(`${API_BASE}/api/web/state`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        gallery_id: activeGallery.id,
+        artifact_id: activeArtifact.id,
+        view,
+        source: "museum_ui"
+      }),
+      keepalive: true
+    }).catch(() => {
+      // Web-to-StackChan sync is optional; do not interrupt browsing.
+    });
+  }
+
   function setBusy(scope, busy, text) {
     const output = scope === "device" ? $("deviceOutput") : scope === "detail" ? $("detailAiOutput") : $("galleryAiOutput");
     if (text) output.innerText = text;
@@ -2879,6 +2896,7 @@ function updatePinVisitedState() {
     markGalleryVisited(activeGallery.id);
     renderArtifacts();
     showScreen("galleryScreen");
+    publishWebState("gallery");
   }
 
   function renderArtifacts() {
@@ -3001,6 +3019,7 @@ function renderRelatedArtifacts() {
     setAudioStatus("detail", "", "", false);
     renderRelatedArtifacts(); 
     showScreen("detailScreen");
+    publishWebState("detail");
   }
 
   function applyStackchanState(state) {

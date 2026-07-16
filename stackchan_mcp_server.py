@@ -11,6 +11,7 @@ from app import (
     get_artifact_persona,
     load_palace,
     publish_stackchan_state,
+    read_web_state,
     retrieve_palace,
 )
 
@@ -63,6 +64,14 @@ def resolve_ids_from_question(question: str, gallery_id: str = "", artifact_id: 
 
     if explicit_gallery:
         return explicit_gallery, explicit_artifact, target_view
+
+    web_state = read_web_state()
+    if web_state.get("active") and web_state.get("gallery_id"):
+        return (
+            str(web_state.get("gallery_id") or ""),
+            str(web_state.get("artifact_id") or ""),
+            str(web_state.get("view") or "detail"),
+        )
     return gallery_id, artifact_id, target_view
 
 
