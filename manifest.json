@@ -1,0 +1,21 @@
+{
+  "name": "故宫智能导览 Agent",
+  "short_name": "故宫导览",
+  "description": "基于 AI 的故宫虚拟展馆与智能讲解系统",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#8E2F28",
+  "theme_color": "#8E2F28",
+  "icons": [
+    {
+      "src": "https://loremflickr.com/192/192/palace,china",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://loremflickr.com/512/512/palace,china",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
