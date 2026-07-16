@@ -2433,7 +2433,8 @@ body {
   }
 
   async function loadPalace() {
-    const res = await fetch(`${API_BASE}/api/palace`);
+    const res = await fetch(`${API_BASE}/api/palace`, { cache: "no-store" });
+    if (!res.ok) throw new Error(`palace data failed: ${res.status}`);
     palace = await res.json();
     galleries = palace.galleries;
     artifactOrder = galleries.flatMap((gallery) => gallery.artifacts.map((artifact) => artifact.id));
@@ -2445,6 +2446,20 @@ body {
     updateVisitProgress();
     updatePinVisitedState();
     routeInitialView();
+  }
+
+  async function loadPalaceWithRetry(maxAttempts = 4) {
+    let lastError = null;
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      try {
+        return await loadPalace();
+      } catch (err) {
+        lastError = err;
+        $("mapOpening").innerText = `后端正在唤醒或加载资料，正在重试 ${attempt}/${maxAttempts}...`;
+        await new Promise((resolve) => setTimeout(resolve, attempt * 1200));
+      }
+    }
+    throw lastError;
   }
 
   function routeInitialView() {
@@ -3509,10 +3524,10 @@ function renderRelatedArtifacts() {
   loadRelationshipState();
   loadVisitedState();
   setupVoice();
-  loadPalace().then(() => {
+  loadPalaceWithRetry().then(() => {
     startStackchanSync();
   }).catch(() => {
-    $("mapOpening").innerText = "无法连接后端，请确认 app.py 已启动。";
+    $("mapOpening").innerText = "暂时无法连接后端。请刷新页面，或等待 Render 服务完成唤醒后再试。";
   });
 </script>
 
