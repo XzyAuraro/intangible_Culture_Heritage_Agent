@@ -1484,62 +1484,74 @@
         transform: none;
       }
             /* --- 手机端布局彻底重构 --- */
-      .guide-widget {
-        display: flex !important;
-        flex-direction: row !important;
-        align-items: flex-end !important;
-        width: calc(100vw - 24px) !important;
-        right: 12px !important;
-        bottom: 12px !important;
-        gap: 8px !important;
-        cursor: grab; /* 鼠标悬停显示抓取手势 */
-        user-select: none; /* 防止拖拽时意外选中文字 */
-        touch-action: none; /* 优化移动端触摸体验 */
-      }
-
-      .guide-widget:active {
-      cursor: grabbing; /* 按下时显示抓取中 */
+          /* 找到 @media (max-width: 720px) 内部的这段并替换 */
+    .guide-widget {
+      display: flex !important;
+      flex-direction: row !important;
+      align-items: center !important;
+      width: calc(100vw - 28px) !important;
+      right: 14px !important;
+      bottom: 14px !important;
+      gap: 10px !important;
+      background: rgba(255, 252, 245, 0.98) !important;
+      border: 1px solid rgba(142, 47, 40, 0.15) !important;
+      border-radius: 16px !important;
+      padding: 10px 12px !important;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.18) !important;
+      pointer-events: auto !important;
+      height: auto !important;
     }
-      
-      .guide-widget.dual {
-        flex-direction: column !important; /* 双人模式改为上下排列，防止横向太挤 */
-        align-items: center !important;
-      }
 
-      .guide-stage {
-        width: 50px !important; /* 缩小头像宽度 */
-        min-height: 80px !important;
-        flex-shrink: 0 !important;
-        display: flex !important;
-        align-items: flex-end !important;
-      }
-
-      .guide-widget.dual .guide-stage {
-        width: 100% !important;
-        min-height: 140px !important;
-        justify-content: center !important;
-        gap: 30px !important;
-      }
-
-      .guide-figure {
-        width: 100% !important;
-        height: auto !important;
-        transform: scale(0.65) !important; /* 进一步缩小立绘 */
-        transform-origin: bottom center !important;
-      }
-
-      .guide-widget.dual .guide-figure {
-        transform: scale(0.6) !important;
-      }
-
-      .guide-character-bubble strong {
-        font-size: 12px;
-      }
-      .guide-character-bubble p {
-        font-size: 11px;
-        -webkit-line-clamp: 3;
-      }
+    /* 将原本复杂的立绘容器压缩为圆形头像 */
+    .guide-stage {
+      width: 46px !important;
+      height: 46px !important;
+      min-height: 46px !important;
+      border-radius: 50% !important;
+      background: var(--guide-accent, #8E2F28) !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      flex-shrink: 0 !important;
+      border: 2px solid #FFF8EA !important;
+      overflow: visible !important;
     }
+
+    /* 隐藏手机端不需要的帽子、身体等复杂立绘元素 */
+    .guide-figure {
+      display: none !important;
+    }
+
+    /* 让头像显示当前角色的第一个字 */
+    .guide-stage::before {
+      content: var(--persona-char, "宫") !important;
+      color: #FFF8EA !important;
+      font-weight: bold !important;
+      font-size: 18px !important;
+    }
+
+    /* 气泡内部样式微调 */
+    .guide-bubble {
+      flex-grow: 1 !important;
+      background: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+      padding: 0 20px 0 2px !important;
+      margin: 0 !important;
+    }
+
+    .guide-bubble strong {
+      font-size: 14px !important;
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    .guide-bubble p {
+      font-size: 13px !important;
+      line-height: 1.4 !important;
+      margin: 0 !important;
+    }
+  }
 
 /* 字体大小调节功能 */
 :root {
@@ -2369,8 +2381,6 @@ body {
   let transcript = "";
   let artifactOrder = [];
   let relationshipState = {};
-  let lastStackchanEventId = "";
-  let stackchanSyncInitialized = false;
 
   const $ = (id) => document.getElementById(id);
   const screens = ["gateScreen", "mapScreen", "deviceScreen", "galleryScreen", "detailScreen"];
@@ -2381,28 +2391,6 @@ body {
     screens.forEach((screenId) => $(screenId).classList.toggle("active", screenId === id));
     const guide = $("guideWidget");
     if (guide) guide.classList.toggle("active", id !== "gateScreen");
-  }
-
-  function activeScreenId() {
-    const active = document.querySelector(".screen.active");
-    return active?.id || "";
-  }
-
-  function publishWebState(view = "gallery") {
-    if (!activeGallery || !activeArtifact) return;
-    fetch(`${API_BASE}/api/web/state`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        gallery_id: activeGallery.id,
-        artifact_id: activeArtifact.id,
-        view,
-        source: "museum_ui"
-      }),
-      keepalive: true
-    }).catch(() => {
-      // Web-to-StackChan sync is optional; do not interrupt browsing.
-    });
   }
 
   function setBusy(scope, busy, text) {
@@ -2450,8 +2438,7 @@ body {
   }
 
   async function loadPalace() {
-    const res = await fetch(`${API_BASE}/api/palace`, { cache: "no-store" });
-    if (!res.ok) throw new Error(`palace data failed: ${res.status}`);
+    const res = await fetch(`${API_BASE}/api/palace`);
     palace = await res.json();
     galleries = palace.galleries;
     artifactOrder = galleries.flatMap((gallery) => gallery.artifacts.map((artifact) => artifact.id));
@@ -2463,20 +2450,6 @@ body {
     updateVisitProgress();
     updatePinVisitedState();
     routeInitialView();
-  }
-
-  async function loadPalaceWithRetry(maxAttempts = 4) {
-    let lastError = null;
-    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-      try {
-        return await loadPalace();
-      } catch (err) {
-        lastError = err;
-        $("mapOpening").innerText = `后端正在唤醒或加载资料，正在重试 ${attempt}/${maxAttempts}...`;
-        await new Promise((resolve) => setTimeout(resolve, attempt * 1200));
-      }
-    }
-    throw lastError;
   }
 
   function routeInitialView() {
@@ -2671,17 +2644,30 @@ setInterval(updateHeatLevels, 4000);
     return lines;
   }
 
-  function updateGuide(persona, options = {}) {
+   function updateGuide(persona, options = {}) {
     const guide = $("guideWidget");
     if (!guide || !persona) return;
     const state = options.state || "idle";
     const score = getRelationshipScore(persona, activeArtifact);
     const stage = relationshipStage(score);
+    
     guide.classList.remove("dual");
     guide.classList.toggle("thinking", state === "thinking");
     guide.classList.toggle("speaking", state === "speaking");
     guide.style.setProperty("--guide-accent", personaAccent(persona));
-    $("guideInitial").innerText = persona.name.slice(0, 1);
+    
+    // 核心修改：获取名字的第一个字
+    const initialChar = persona.name.slice(0, 1);
+    
+    // 1. 更新电脑端立绘里的字
+    $("guideInitial").innerText = initialChar;
+    
+    // 2. 关键：同步更新手机端圆形头像里的字（通过 CSS 变量传值）
+    const guideStage = document.querySelector(".guide-stage");
+    if (guideStage) {
+      guideStage.style.setProperty("--persona-char", `"${initialChar}"`);
+    }
+
     $("guidePrimaryName").innerText = persona.name;
     $("guidePrimaryLine").innerText = clipGuideLine(options.line || persona.voice || "我会围绕当前文物为你讲解。", 72);
     $("guideSecondaryName").innerText = "";
@@ -2689,7 +2675,15 @@ setInterval(updateHeatLevels, 4000);
     $("guideName").innerText = persona.name;
     $("guideLine").innerText = clipGuideLine(options.line || persona.voice || "我会围绕当前文物为你讲解。");
     $("guideStatus").innerText = options.status || `${stage} · 第 ${score} 次交流`;
+
+    // 唤回按钮提醒逻辑
+    const summonBtn = document.getElementById('guideSummonBtn');
+    if (guide.style.display === 'none' && summonBtn) {
+      summonBtn.classList.add('shake-anim');
+      setTimeout(() => summonBtn.classList.remove('shake-anim'), 3000);
+    }
   }
+
 
   function updateDualGuide(personas = [], options = {}) {
     const guide = $("guideWidget");
@@ -2896,7 +2890,6 @@ function updatePinVisitedState() {
     markGalleryVisited(activeGallery.id);
     renderArtifacts();
     showScreen("galleryScreen");
-    publishWebState("gallery");
   }
 
   function renderArtifacts() {
@@ -3019,64 +3012,6 @@ function renderRelatedArtifacts() {
     setAudioStatus("detail", "", "", false);
     renderRelatedArtifacts(); 
     showScreen("detailScreen");
-    publishWebState("detail");
-  }
-
-  function applyStackchanState(state) {
-    if (!state?.active || !state.event_id || state.event_id === lastStackchanEventId || !galleries.length) return;
-    lastStackchanEventId = state.event_id;
-    const gallery = galleries.find((item) => item.id === state.gallery_id);
-    if (!gallery) return;
-    const artifact = gallery.artifacts.find((item) => item.id === state.artifact_id) || gallery.artifacts[0];
-    const shouldOpenDetail = state.target_view === "detail" && artifact;
-
-    if (!activeGallery || activeGallery.id !== gallery.id) {
-      openGallery(gallery.id);
-    }
-    if (shouldOpenDetail) {
-      openDetail(artifact.id);
-    } else if (activeScreenId() === "detailScreen") {
-      showScreen("galleryScreen");
-    }
-
-    const scope = shouldOpenDetail ? "detail" : "gallery";
-    const output = scope === "detail" ? $("detailAiOutput") : $("galleryAiOutput");
-    const question = scope === "detail" ? $("detailQuestion") : $("galleryQuestion");
-    const persona = getArtifactPersona(artifact, gallery);
-    if (question && state.question) question.value = state.question;
-    if (output) output.innerText = `StackChan：${state.text || ""}`;
-    setAudioStatus(scope, "StackChan 已同步", "这段讲解来自实体设备语音触发。");
-    updateGuide(persona, {
-      state: "speaking",
-      line: state.text || "",
-      status: "StackChan 正在讲解"
-    });
-  }
-
-  async function pollStackchanState() {
-    if (!galleries.length) return;
-    try {
-      const res = await fetch(`${API_BASE}/api/stackchan/state?t=${Date.now()}`, { cache: "no-store" });
-      if (!res.ok) return;
-      const state = await res.json();
-      if (!state?.active || !state.event_id) return;
-      if (!stackchanSyncInitialized) {
-        stackchanSyncInitialized = true;
-        const isFresh = state.created_at && Date.now() - state.created_at < 30000;
-        if (!isFresh) {
-          lastStackchanEventId = state.event_id;
-          return;
-        }
-      }
-      applyStackchanState(state);
-    } catch (err) {
-      // StackChan sync is optional; keep the museum UI usable if polling fails.
-    }
-  }
-
-  function startStackchanSync() {
-    pollStackchanState();
-    window.setInterval(pollStackchanState, 2000);
   }
 
   async function ask(scope, mode = "chat") {
@@ -3543,10 +3478,8 @@ function renderRelatedArtifacts() {
   loadRelationshipState();
   loadVisitedState();
   setupVoice();
-  loadPalaceWithRetry().then(() => {
-    startStackchanSync();
-  }).catch(() => {
-    $("mapOpening").innerText = "暂时无法连接后端。请刷新页面，或等待 Render 服务完成唤醒后再试。";
+  loadPalace().catch(() => {
+    $("mapOpening").innerText = "无法连接后端，请确认 app.py 已启动。";
   });
 </script>
 
