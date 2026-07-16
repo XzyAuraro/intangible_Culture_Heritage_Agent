@@ -39,14 +39,14 @@
 
 ```mermaid
 flowchart LR
-    A[进入 Demo] --> B[故宫总览地图]
-    B --> C[选择展馆]
-    C --> D[横向滑动选择文物]
-    D --> E[文物详情页]
-    E --> F[向角色提问]
-    F --> G[RAG 检索展馆资料]
-    G --> H[模型生成讲解]
-    H --> I[文字与音频输出]
+    A["进入 Demo"] --> B["故宫总览地图"]
+    B --> C["选择展馆"]
+    C --> D["横向滑动选择文物"]
+    D --> E["文物详情页"]
+    E --> F["向角色提问"]
+    F --> G["RAG 检索展馆资料"]
+    G --> H["模型生成讲解"]
+    H --> I["文字与音频输出"]
 ```
 
 ## StackChan 联动流程
@@ -76,25 +76,25 @@ sequenceDiagram
 
 ```mermaid
 flowchart TB
-    subgraph Frontend[前端 index.html]
-        M[故宫地图]
-        G[展馆与文物详情]
-        V[语音识别与播放器]
-        S1[StackChan 状态轮询]
+    subgraph Frontend["前端 index.html"]
+        M["故宫地图"]
+        G["展馆与文物详情"]
+        V["语音识别与播放器"]
+        S1["StackChan 状态轮询"]
     end
 
-    subgraph Backend[FastAPI app.py]
-        API[REST API]
-        RAG[RAG 检索]
-        LLM[DashScope / Qwen]
-        TTS[edge-tts]
-        State[web_state / stackchan_state]
+    subgraph Backend["FastAPI app.py"]
+        API["REST API"]
+        RAG["RAG 检索"]
+        LLM["DashScope / Qwen"]
+        TTS["edge-tts"]
+        State["web_state / stackchan_state"]
     end
 
-    subgraph Device[实体设备联动]
-        Bridge[xiaozhi_mcp_bridge.py]
-        Tool[stackchan_mcp_server.py]
-        SC[StackChan]
+    subgraph Device["实体设备联动"]
+        Bridge["xiaozhi_mcp_bridge.py"]
+        Tool["stackchan_mcp_server.py"]
+        SC["StackChan"]
     end
 
     Frontend --> API
