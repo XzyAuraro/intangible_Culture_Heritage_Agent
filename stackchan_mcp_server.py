@@ -1,6 +1,8 @@
 import logging
 import os
 import sys
+import json
+import urllib.request
 from typing import Any
 
 from mcp.server.fastmcp import FastMCP
@@ -36,7 +38,28 @@ def compact_text(text: str, max_chars: int = 300) -> str:
     return compact[: max_chars - 1].rstrip("，、；：,. ") + "。"
 
 
-def resolve_ids_from_question(question: str, gallery_id: str = "", artifact_id: str = "") -> tuple[str, str, str]:
+def read_current_web_state() -> tuple[dict[str, Any], str]:
+    state_url = os.getenv("STACKCHAN_WEB_STATE_URL", "").strip()
+    if not state_url and os.getenv("PORT"):
+        state_url = f"http://127.0.0.1:{os.getenv('PORT')}/api/web/state"
+
+    if state_url:
+        try:
+            request = urllib.request.Request(state_url, headers={"Cache-Control": "no-store"})
+            with urllib.request.urlopen(request, timeout=1.5) as response:
+                data = json.loads(response.read().decode("utf-8"))
+                if isinstance(data, dict):
+                    return data, "api"
+        except Exception as exc:
+            logger.warning("Unable to read web state from API, falling back to file: %s", type(exc).__name__)
+
+    state = read_web_state()
+    if state.get("active"):
+        return state, "file"
+    return state, "none"
+
+
+def resolve_ids_from_question(question: str, gallery_id: str = "", artifact_id: str = "") -> tuple[str, str, str, str]:
     """Prefer explicit gallery/artifact names spoken by the user over stale device context."""
     palace = load_palace()
     query = question or ""
@@ -63,16 +86,17 @@ def resolve_ids_from_question(question: str, gallery_id: str = "", artifact_id: 
                 break
 
     if explicit_gallery:
-        return explicit_gallery, explicit_artifact, target_view
+        return explicit_gallery, explicit_artifact, target_view, "spoken"
 
-    web_state = read_web_state()
+    web_state, _source = read_current_web_state()
     if web_state.get("active") and web_state.get("gallery_id"):
         return (
             str(web_state.get("gallery_id") or ""),
             str(web_state.get("artifact_id") or ""),
             str(web_state.get("view") or "detail"),
+            "web_state",
         )
-    return gallery_id, artifact_id, target_view
+    return gallery_id, artifact_id, target_view, "tool_args"
 
 
 @mcp.tool()
@@ -85,7 +109,12 @@ def palace_museum_guide(
     """当用户要求 StackChan 做故宫讲解员、讲解展馆或文物时调用。只返回讲解文本，不控制硬件动作、表情、灯光或舵机。"""
     safe_max = max(80, min(int(max_chars or 300), 500))
     query = (question or "请讲解当前文物。").strip()
-    resolved_gallery_id, resolved_artifact_id, target_view = resolve_ids_from_question(query, gallery_id, artifact_id)
+    web_state_snapshot, web_state_source = read_current_web_state()
+    resolved_gallery_id, resolved_artifact_id, target_view, resolution_source = resolve_ids_from_question(
+        query,
+        gallery_id,
+        artifact_id,
+    )
     bundle = retrieve_palace(query, resolved_gallery_id or None, resolved_artifact_id or None)
     gallery = bundle["gallery"]
     artifact = bundle["artifact"]
@@ -108,6 +137,15 @@ def palace_museum_guide(
             "artifact_title": artifact["title"],
             "persona": persona.get("name", "讲解者"),
             "target_view": target_view,
+            "resolution_source": resolution_source,
+            "web_state_source": web_state_source,
+            "web_state_snapshot": {
+                "active": bool(web_state_snapshot.get("active")),
+                "gallery_id": web_state_snapshot.get("gallery_id", ""),
+                "artifact_id": web_state_snapshot.get("artifact_id", ""),
+                "view": web_state_snapshot.get("view", ""),
+                "updated_at": web_state_snapshot.get("updated_at", ""),
+            },
         }
     )
     return {
@@ -119,7 +157,11 @@ def palace_museum_guide(
         "artifact_title": artifact["title"],
         "persona": persona.get("name", "讲解者"),
         "target_view": target_view,
-        "resolved_from_question": bool(resolved_gallery_id or resolved_artifact_id),
+        "resolution_source": resolution_source,
+        "web_state_source": web_state_source,
+        "web_state_gallery_id": web_state_snapshot.get("gallery_id", ""),
+        "web_state_artifact_id": web_state_snapshot.get("artifact_id", ""),
+        "resolved_from_question": resolution_source == "spoken",
         "safety": "text_only_no_hardware_action",
     }
 
