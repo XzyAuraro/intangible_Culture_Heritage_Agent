@@ -1841,6 +1841,52 @@ body {
   justify-content: center;
 }
 
+.related-artifacts {
+  margin: 18px 0;
+}
+
+.related-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--red-deep);
+  margin-bottom: 10px;
+}
+
+.related-list {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.related-card {
+  flex: 1 1 160px;
+  text-align: left;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--ivory);
+  border: 1px solid var(--line);
+  cursor: pointer;
+  transition: transform 160ms ease, border-color 160ms ease;
+}
+
+.related-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--gold);
+}
+
+.related-card strong {
+  display: block;
+  color: var(--red-deep);
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.related-card span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+}
+
 </style>
 </head>
 <body>
@@ -2027,6 +2073,7 @@ body {
       <div class="meta" id="detailPeriod">时代</div>
       <p id="detailDescription">文物说明</p>
       <div class="source-list" id="detailSource">出处</div>
+      <div class="related-artifacts" id="detailRelated"></div>
       <div class="detail-ai">
         <h3 id="detailPersona">向讲解者提问</h3>
         <div class="relationship-meter" id="detailRelationship">初次见面</div>
@@ -2607,6 +2654,57 @@ function updatePinVisitedState() {
   }, 500);
 }
 
+function getRelatedArtifacts(artifact, gallery, limit = 3) {
+  const currentTopics = artifact?.personaTrigger?.topics || [];
+  const currentKeywords = artifact?.personaTrigger?.keywords || [];
+  const scored = [];
+  galleries.forEach((g) => {
+    g.artifacts.forEach((a) => {
+      if (a.id === artifact.id) return;
+      const topics = a?.personaTrigger?.topics || [];
+      const keywords = a?.personaTrigger?.keywords || [];
+      let score = 0;
+      topics.forEach((t) => { if (currentTopics.includes(t)) score += 2; });
+      keywords.forEach((k) => { if (currentKeywords.includes(k)) score += 1; });
+      if (g.id === gallery.id) score += 1;
+      if (score > 0) scored.push({ artifact: a, gallery: g, score });
+    });
+  });
+  scored.sort((x, y) => y.score - x.score);
+  return scored.slice(0, limit);
+}
+
+function renderRelatedArtifacts() {
+  const box = $("detailRelated");
+  if (!box) return;
+  const related = getRelatedArtifacts(activeArtifact, activeGallery);
+  if (!related.length) {
+    box.innerHTML = "";
+    return;
+  }
+  box.innerHTML = `
+    <div class="related-title">您可能还感兴趣</div>
+    <div class="related-list">
+      ${related.map(({ artifact, gallery }) => `
+        <button type="button" class="related-card" data-gallery="${gallery.id}" data-artifact="${artifact.id}">
+          <strong>${artifact.title}</strong>
+          <span>${gallery.name} · ${artifact.period}</span>
+        </button>
+      `).join("")}
+    </div>
+  `;
+  box.querySelectorAll(".related-card").forEach((card) => {
+    card.onclick = () => {
+      const galleryId = card.dataset.gallery;
+      const artifactId = card.dataset.artifact;
+      if (galleryId !== activeGallery.id) {
+        openGallery(galleryId);
+      }
+      openDetail(artifactId);
+    };
+  });
+}
+
   function openDetail(artifactId) {
     activeArtifact = activeGallery.artifacts.find((artifact) => artifact.id === artifactId) || activeGallery.artifacts[0];
     const persona = getArtifactPersona(activeArtifact, activeGallery);
@@ -2638,6 +2736,7 @@ function updatePinVisitedState() {
     clearSources("detail");
     $("detailAudio").removeAttribute("src");
     setAudioStatus("detail", "", "", false);
+    renderRelatedArtifacts(); 
     showScreen("detailScreen");
   }
 
